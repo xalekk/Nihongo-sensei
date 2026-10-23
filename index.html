@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100 selection:bg-rose-600 selection:text-white">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nihongo Sensei - Apprendre le Japonais de Zéro (PWA)</title>
+  <meta name="description" content="Apprenez le japonais pas à pas du zéro absolu (Niveau Maternelle à JLPT N5) : Kanas, Kanjis interactifs cliquables, Vocabulaire, Grammaire SOV avec déblocage à 100%.">
+  <meta name="theme-color" content="#e11d48">
+
+  <!-- Manifest Data URL for PWA Install -->
+  <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Nihongo%20Sensei%20PWA%22%2C%22short_name%22%3A%22NihongoSensei%22%2C%22description%22%3A%22Apprendre%20le%20japonais%20de%20A%20%C3%A0%20Z%20avec%20inspecteur%20Kanji%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%23e11d48%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fapi.iconify.design%2Flucide%2Ftorii-gate.svg%3Fcolor%3D%2523e11d48%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            shuiro: {
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+              800: '#9f1239'
+            }
+          },
+          fontFamily: {
+            japanese: ['"Noto Sans JP"', 'sans-serif'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #e11d48; }
+
+    #practice-canvas {
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .bg-zen-pattern {
+      background-color: #050811;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    .jp-text-wrap {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      hyphens: none;
+    }
+
+    .kanji-clickable {
+      cursor: pointer;
+      position: relative;
+      display: inline-block;
+      transition: all 0.15s ease;
+      padding: 0 1px;
+      border-bottom: 2px dashed #f43f5e;
+    }
+    .kanji-clickable:hover {
+      color: #fb7185;
+      background-color: rgba(244, 63, 94, 0.15);
+      border-radius: 4px;
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 antialiased selection:bg-shuiro-600 selection:text-white">
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex flex-col max-w-5xl w-full mx-auto bg-slate-900 border-x border-slate-800/80 min-h-screen shadow-2xl">
+
+    <!-- HEADER & STATS BAR -->
+    <header class="bg-slate-950/90 border-b border-slate-800/80 p-4 sticky top-0 z-50 backdrop-blur flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-shuiro-700 to-shuiro-500 flex items-center justify-center text-white font-japanese text-xl font-black shadow-lg">
+          日
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-black text-white tracking-wide flex items-center gap-2">
+            NIHONGO SENSEI <span class="text-[10px] bg-shuiro-500/20 text-shuiro-300 border border-shuiro-500/30 font-mono px-2 py-0.5 rounded-full">PWA</span>
+          </h1>
+          <p class="text-xs text-slate-400">Apprendre le Japonais • Cliquez sur les Kanjis !</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- PWA INSTALL BUTTON -->
+        <button id="pwa-install-btn" onclick="triggerPWAInstall()" class="text-xs bg-shuiro-600 hover:bg-shuiro-500 text-white font-bold py-1.5 px-3 rounded-full flex items-center gap-1.5 shadow transition">
+          <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Installer</span>
+        </button>
+
+        <!-- STREAK & XP -->
+        <div class="flex items-center gap-3 bg-slate-800/90 border border-slate-700/80 rounded-full px-3 py-1.5 text-xs">
+          <div class="flex items-center gap-1 text-amber-400 font-bold" title="Série de jours">
+            <i class="fa-solid fa-fire text-amber-500"></i>
+            <span id="user-streak">1 J</span>
+          </div>
+          <div class="w-px h-3 bg-slate-700"></div>
+          <div class="flex items-center gap-1 text-shuiro-400 font-bold" title="XP Accumulée">
+            <i class="fa-solid fa-star text-shuiro-400"></i>
+            <span id="user-xp">0 XP</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="bg-slate-950 border-b border-slate-800/80 flex overflow-x-auto p-1.5 gap-1 text-xs font-medium scrollbar-none sticky top-[65px] z-40 backdrop-blur">
+      <button onclick="switchTab('curriculum')" id="tab-curriculum" class="tab-btn active flex-1 min-w-[110px] py-2 px-2 text-center rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1.5 bg-slate-800 text-shuiro-400 border border-slate-700">
+        <i class="fa-solid fa-route text-sm"></i> <span>Parcours 30J</span>
+      </button>
+      <button onclick="switchTab('practice')" id="tab-practice" class="tab-btn flex-1 min-w-[110px] py-2 px-2 text-center rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-dumbbell text-sm"></i> <span>Dojo Kanas</span>
+      </button>
+      <button onclick="switchTab('kanji')" id="tab-kanji" class="tab-btn flex-1 min-w-[90px] py-2 px-2 text-center rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-book-bookmark text-sm"></i> <span>Lexique</span>
+      </button>
+      <button onclick="switchTab('grammar')" id="tab-grammar" class="tab-btn flex-1 min-w-[90px] py-2 px-2 text-center rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-puzzle-piece text-sm"></i> <span>Phrases SOV</span>
+      </button>
+      <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 min-w-[90px] py-2 px-2 text-center rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-trophy text-sm"></i> <span>Profil</span>
+      </button>
+    </nav>
+
+    <!-- MAIN DISPLAY CONTENT -->
+    <main class="flex-1 p-4 sm:p-6 bg-zen-pattern relative overflow-y-auto">
+
+      <!-- =================================================================== -->
+      <!-- TAB 1: CURRICULUM (DAY BY DAY WITH 100% UNLOCK) -->
+      <!-- =================================================================== -->
+      <section id="sec-curriculum" class="space-y-6 max-w-3xl mx-auto">
+        <div class="bg-gradient-to-r from-slate-900 via-rose-950/20 to-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-[10px] bg-shuiro-500/20 text-shuiro-300 font-mono px-2.5 py-0.5 rounded-full border border-shuiro-500/30">Niveau Maternelle ➔ JLPT N5</span>
+            <h2 class="text-lg font-black text-white mt-1">Parcours Chronologique 30 Jours</h2>
+            <p class="text-xs text-slate-400 mt-1">Cliquez sur n'importe quel <strong class="text-shuiro-400 underline">Kanji</strong> pour voir sa fiche détaillée ! Obtenez 100% pour débloquer la suite.</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">Jours Débloqués</span>
+            <span id="curriculum-completion-text" class="text-xl font-black text-amber-400 font-mono">1 / 30</span>
+          </div>
+        </div>
+
+        <!-- DAY LESSON & QUIZ VIEW CONTAINER -->
+        <div id="day-active-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <span id="active-day-badge" class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/30">JOUR 1</span>
+              <h3 id="active-day-title" class="text-lg sm:text-xl font-black text-white mt-1">...</h3>
+            </div>
+            <button onclick="closeActiveDayLesson()" class="text-slate-400 hover:text-white p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold">
+              <i class="fa-solid fa-xmark"></i> Fermer
+            </button>
+          </div>
+
+          <!-- STEP NAVIGATION -->
+          <div class="flex border-b border-slate-800 text-xs font-semibold text-center">
+            <button onclick="switchDayStep('discovery')" id="step-btn-discovery" class="flex-1 py-2.5 border-b-2 border-shuiro-500 text-shuiro-400 font-bold">1. Cours & Items Appris</button>
+            <button onclick="switchDayStep('validation')" id="step-btn-validation" class="flex-1 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white">2. Quiz de Validation (100% Requis)</button>
+          </div>
+
+          <!-- STEP 1: DISCOVERY & ITEMS -->
+          <div id="step-panel-discovery" class="space-y-4">
+            <div id="discovery-description" class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800"></div>
+            <div>
+              <h4 class="text-xs font-bold text-white mb-2">Items introduits dans cette leçon :</h4>
+              <div id="day-items-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            </div>
+            <div class="pt-2 text-right">
+              <button onclick="switchDayStep('validation')" class="px-5 py-2.5 bg-shuiro-600 hover:bg-shuiro-500 text-white font-bold text-xs rounded-xl shadow transition">
+                Passer au Quiz de Validation <i class="fa-solid fa-arrow-right ml-1"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: VALIDATION QUIZ (1 QUESTION PER ITEM) -->
+          <div id="step-panel-validation" class="hidden space-y-5">
+            <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
+              <div class="font-mono text-slate-400">
+                Question <span id="quiz-question-num" class="text-white font-bold">1</span> / <span id="quiz-total-num" class="text-amber-400 font-bold">10</span>
+              </div>
+              <div class="font-mono text-slate-400">
+                Score : <span id="quiz-score-val" class="text-emerald-400 font-bold">0</span>
+              </div>
+            </div>
+
+            <div id="day-quiz-card" class="bg-slate-950 p-5 sm:p-6 rounded-2xl border border-slate-800 text-center space-y-4">
+              <span class="text-[10px] font-mono text-slate-500 uppercase block" id="quiz-item-category">Question Leçon</span>
+              <div id="day-quiz-prompt" class="jp-text-wrap text-3xl sm:text-5xl font-japanese font-bold text-white my-2 min-h-[60px] flex items-center justify-center">あ</div>
+              <p id="day-quiz-question-text" class="text-xs text-slate-300">Quelle est la prononciation ou la signification exacte ?</p>
+              <div id="day-quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"></div>
+            </div>
+
+            <!-- RESULT SUMMARY -->
+            <div id="day-quiz-summary" class="hidden bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center space-y-4">
+              <div id="summary-icon" class="w-16 h-16 rounded-full flex items-center justify-center text-3xl mx-auto"></div>
+              <h3 id="summary-title" class="text-lg font-black text-white">...</h3>
+              <p id="summary-desc" class="text-xs text-slate-300">...</p>
+              <div class="flex flex-wrap justify-center gap-3 pt-2">
+                <button id="summary-retry-btn" onclick="startDayQuiz()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">
+                  Réessayer le Quiz (100% Requis)
+                </button>
+                <button id="summary-next-btn" onclick="closeActiveDayLesson(); renderCurriculumGrid();" class="hidden px-5 py-2.5 bg-shuiro-600 hover:bg-shuiro-500 text-white rounded-xl text-xs font-bold transition shadow">
+                  Voir le Jour Suivant Débloqué !
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 30-DAY GRID DISPLAY -->
+        <div id="curriculum-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: FREE PRACTICE DOJO -->
+      <!-- =================================================================== -->
+      <section id="sec-practice" class="hidden space-y-6 max-w-2xl mx-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-dumbbell text-shuiro-500"></i> Dojo Kanas - Entraînement Librement
+              </h2>
+              <p class="text-[11px] text-slate-400">Reconnaissance visuelle, auditive ou tracé tactile.</p>
+            </div>
+
+            <!-- QUESTION COUNT ADJUSTER -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+              <span class="text-[10px] text-slate-500 px-1 font-mono">Questions :</span>
+              <button onclick="setPracticeCount(10)" id="count-10" class="px-2.5 py-1 rounded-lg transition text-slate-400">10</button>
+              <button onclick="setPracticeCount(20)" id="count-20" class="px-2.5 py-1 rounded-lg transition text-slate-400">20</button>
+              <button onclick="setPracticeCount(50)" id="count-50" class="px-2.5 py-1 rounded-lg transition bg-shuiro-600 text-white">50</button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between border-t border-slate-800 pt-3 gap-2">
+            <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+              <button onclick="setPracticeFilter('hiragana')" id="filter-hira" class="px-3 py-1 rounded-lg transition bg-shuiro-600 text-white">Hiragana</button>
+              <button onclick="setPracticeFilter('katakana')" id="filter-kata" class="px-3 py-1 rounded-lg transition text-slate-400 hover:text-white">Katakana</button>
+              <button onclick="setPracticeFilter('both')" id="filter-both" class="px-3 py-1 rounded-lg transition text-slate-400 hover:text-white">Mixte</button>
+            </div>
+
+            <div class="flex gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <button onclick="setPracticeMode('visual')" id="mode-btn-visual" class="px-2.5 py-1 rounded-lg bg-slate-800 text-shuiro-300 font-bold"><i class="fa-solid fa-eye"></i> Visuel</button>
+              <button onclick="setPracticeMode('audio')" id="mode-btn-audio" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white"><i class="fa-solid fa-volume-high"></i> Audio</button>
+              <button onclick="setPracticeMode('writing')" id="mode-btn-writing" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white"><i class="fa-solid fa-paintbrush"></i> Tracé</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-slate-400">Avancement :</span>
+            <span id="practice-counter" class="font-bold text-shuiro-400 font-mono">1 / 50</span>
+          </div>
+          <div class="w-1/3 bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div id="practice-progress-bar" class="bg-gradient-to-r from-shuiro-600 to-amber-500 h-full w-[2%] transition-all duration-300"></div>
+          </div>
+          <div class="flex items-center gap-1 font-bold text-emerald-400">
+            <i class="fa-solid fa-check-circle"></i>
+            <span id="practice-score">Score: 0</span>
+          </div>
+        </div>
+
+        <div id="practice-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-6">
+          <div id="panel-visual" class="space-y-6">
+            <div class="text-center py-6 bg-slate-950 rounded-2xl border border-slate-800 relative px-4">
+              <h2 id="visual-prompt-kana" class="jp-text-wrap text-6xl sm:text-7xl font-japanese font-black text-white tracking-widest my-2">あ</h2>
+              <button onclick="speakCurrentPracticePrompt()" class="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center justify-center gap-1.5 mx-auto mt-2">
+                <i class="fa-solid fa-volume-high"></i> Écouter Prononciation
+              </button>
+            </div>
+            <div id="visual-options-grid" class="grid grid-cols-2 gap-3"></div>
+          </div>
+
+          <div id="panel-audio" class="hidden space-y-6">
+            <div class="text-center py-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+              <p class="text-xs text-slate-400">Écoutez et identifiez le symbole :</p>
+              <button onclick="playPracticeAudioPrompt()" class="w-20 h-20 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 rounded-full flex items-center justify-center text-3xl mx-auto shadow-lg transition active:scale-95">
+                <i class="fa-solid fa-volume-high"></i>
+              </button>
+            </div>
+            <div id="audio-options-grid" class="grid grid-cols-2 gap-3"></div>
+          </div>
+
+          <div id="panel-writing" class="hidden space-y-5">
+            <div class="text-center bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-1">
+              <p class="text-xs text-slate-400">Tracez le caractère correspondant :</p>
+              <h2 id="writing-prompt-romaji" class="text-4xl font-mono font-black text-amber-400">a</h2>
+            </div>
+            <div class="flex flex-col items-center justify-center">
+              <div class="relative bg-slate-950 border-2 border-dashed border-slate-700 rounded-2xl p-2 shadow-inner">
+                <canvas id="practice-canvas" width="240" height="240" class="rounded-xl"></canvas>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <button onclick="clearPracticeCanvas()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Effacer</button>
+              <button onclick="toggleWritingSolution()" class="px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold">Voir Modèle</button>
+              <button onclick="validatePracticeAnswer(true)" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow">Valider (+2 XP)</button>
+            </div>
+            <div id="writing-solution-box" class="hidden text-center p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <p class="text-xs text-slate-400 mb-1">Modèle de tracé :</p>
+              <div id="writing-solution-kana" class="jp-text-wrap text-6xl font-japanese font-black text-shuiro-400">あ</div>
+            </div>
+          </div>
+
+          <div id="practice-feedback" class="hidden p-3 rounded-xl text-xs font-bold text-center border"></div>
+        </div>
+
+        <div id="practice-summary-modal" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+          <div class="w-16 h-16 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full flex items-center justify-center text-3xl mx-auto">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h3 class="text-lg font-black text-white">Session du Dojo Terminée !</h3>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <p id="summary-final-score" class="text-2xl font-black text-shuiro-400">Score : 0 / 50</p>
+            <p id="summary-xp-gain" class="text-xs font-bold text-emerald-400">+0 XP gagnés</p>
+          </div>
+          <button onclick="restartPracticeSession()" class="w-full py-3 bg-shuiro-600 hover:bg-shuiro-500 text-white font-bold rounded-xl text-xs shadow transition">
+            Relancer une nouvelle session
+          </button>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: DICTIONARY / LEXICON SEARCH -->
+      <!-- =================================================================== -->
+      <section id="sec-kanji" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+          <input type="text" id="vocab-search" oninput="filterVocabList()" placeholder="Rechercher un kanji, mot, romaji ou terme de dojo..." class="bg-slate-950 border border-slate-800 text-xs rounded-xl p-2.5 w-full sm:w-80 text-slate-100 focus:border-shuiro-500 outline-none">
+          <span class="text-xs text-slate-400 font-mono">Lexique Pratique & Arts Martiaux</span>
+        </div>
+
+        <div id="kanji-vocab-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: GRAMMAR & SENTENCE BUILDER -->
+      <!-- =================================================================== -->
+      <section id="sec-grammar" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-puzzle-piece text-shuiro-500"></i> Syntaxe & Structure SOV
+          </h3>
+          <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+              <span class="text-amber-400 font-bold">Règle d'or SOV (Sujet + Objet + Verbe) :</span>
+              <p>Français : Sujet + Verbe + Objet ("Je mange une pomme")</p>
+              <p class="text-shuiro-400 font-bold">Japonais : Sujet + Objet + Verbe ("Je pomme mange")</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <span class="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2.5 py-1 rounded-full border border-amber-500/30">Atelier d'Assemblage SOV</span>
+          <h3 id="builder-instruction" class="text-sm font-bold text-white mt-2">Traduisez : "Je suis Tanaka."</h3>
+
+          <div id="sentence-dropzone" class="min-h-[64px] h-auto bg-slate-950 border-2 border-dashed border-slate-700 rounded-xl p-3 flex flex-wrap items-center gap-2"></div>
+          <div id="word-bank" class="flex flex-wrap gap-2 pt-2"></div>
+
+          <div class="flex justify-end gap-3 pt-3">
+            <button onclick="resetSentenceBuilder()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Réinitialiser</button>
+            <button onclick="checkSentence()" class="px-5 py-2 bg-shuiro-600 text-white rounded-xl text-xs font-bold shadow">Valider (+10 XP)</button>
+          </div>
+          <div id="builder-feedback" class="hidden text-xs p-3 rounded-xl font-semibold"></div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5: USER PROFILE & PWA SETTINGS -->
+      <!-- =================================================================== -->
+      <section id="sec-profile" class="hidden space-y-6 max-w-2xl mx-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-center">
+          <div class="w-20 h-20 bg-gradient-to-tr from-shuiro-600 to-amber-500 rounded-full flex items-center justify-center text-white text-3xl font-black mx-auto shadow-lg">
+            学
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-white">Élève de Nihongo Sensei</h3>
+            <p class="text-xs text-slate-400">Sauvegarde automatique dans le navigateur</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 pt-4 border-t border-slate-800">
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">XP TOTAL</span>
+              <span id="profile-xp-val" class="text-lg font-black text-shuiro-400">0</span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">JOURS 100% DÉBLOQUÉS</span>
+              <span id="profile-unlocked-days" class="text-lg font-black text-amber-400">1 / 30</span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">SÉRIE EN COURS</span>
+              <span id="profile-streak-val" class="text-lg font-black text-emerald-400">1 J</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+          <h4 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-arrows-rotate text-shuiro-400"></i> Gestion des Données
+          </h4>
+          <button onclick="resetAllProgress()" class="w-full py-2.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 rounded-xl text-xs font-bold transition">
+            Réinitialiser la progression à zéro
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- KANJI INSPECTOR MODAL -->
+    <div id="kanji-modal-overlay" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-150">
+        <button onclick="closeKanjiModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="flex items-center space-x-4 border-b border-slate-800 pb-4">
+          <div id="modal-kanji-char" class="w-20 h-20 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center font-japanese text-5xl font-black text-shuiro-400 shadow-inner">
+            日
+          </div>
+          <div>
+            <span class="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-full border border-amber-500/30">Explorateur Kanji</span>
+            <h3 id="modal-kanji-meaning" class="text-xl font-black text-white mt-1">Soleil / Jour</h3>
+            <p id="modal-kanji-strokes" class="text-xs text-slate-400 font-mono mt-0.5">4 traits • JLPT N5</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-mono">Lecture Onyomi (音読み) :</span>
+              <span id="modal-kanji-onyomi" class="text-shuiro-400 font-japanese font-bold">ニチ, ジツ</span>
+            </div>
+            <div class="flex items-center justify-between text-xs border-t border-slate-900 pt-1.5">
+              <span class="text-slate-400 font-mono">Lecture Kunyomi (訓読み) :</span>
+              <span id="modal-kanji-kunyomi" class="text-amber-400 font-japanese font-bold">ひ, -び</span>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-white mb-2">Exemples de mots avec ce Kanji :</h4>
+            <div id="modal-kanji-examples" class="space-y-1.5"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button onclick="speakCurrentModalKanji()" class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-2">
+            <i class="fa-solid fa-volume-high"></i> Prononciation
+          </button>
+          <button onclick="closeKanjiModal()" class="px-5 py-2 bg-shuiro-600 hover:bg-shuiro-500 text-white rounded-xl text-xs font-bold shadow">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800/80 p-4 text-center text-xs text-slate-500">
+      <p>Nihongo Sensei (日本語先生) • Apprendre le Japonais de A à Z avec Inspecteur Kanji</p>
+    </footer>
+
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. DATABASE OF KANJIS FOR INTERACTIVE INSPECTOR
+       ========================================================================== */
+    const KANJI_DATABASE = {
+      "日": { meaning: "Soleil / Jour", onyomi: "ニチ, ジツ", kunyomi: "ひ, -び", strokes: 4, examples: [{ jp: "日本", r: "Nihon", fr: "Japon" }, { jp: "毎日", r: "Mainichi", fr: "Tous les jours" }] },
+      "月": { meaning: "Lune / Mois", onyomi: "ゲツ, ガツ", kunyomi: "つき", strokes: 4, examples: [{ jp: "今月", r: "Kongetsu", fr: "Ce mois-ci" }, { jp: "月曜日", r: "Getsuyoubi", fr: "Lundi" }] },
+      "木": { meaning: "Arbre / Bois", onyomi: "ボク, モク", kunyomi: "き", strokes: 4, examples: [{ jp: "大木", r: "Taiboku", fr: "Grand arbre" }] },
+      "金": { meaning: "Or / Métal / Argent", onyomi: "キン, コン", kunyomi: "かね", strokes: 8, examples: [{ jp: "お金", r: "Okanē", fr: "Argent" }] },
+      "土": { meaning: "Terre / Sol", onyomi: "ド, ト", kunyomi: "つち", strokes: 3, examples: [{ jp: "土曜日", r: "Doyoubi", fr: "Samedi" }] },
+      "一": { meaning: "Un (1)", onyomi: "イチ, イツ", kunyomi: "ひと-つ", strokes: 1, examples: [{ jp: "一人", r: "Hitori", fr: "Une personne" }] },
+      "二": { meaning: "Deux (2)", onyomi: "ニ", kunyomi: "ふた-つ", strokes: 2, examples: [{ jp: "二人", r: "Futari", fr: "Deux personnes" }] },
+      "三": { meaning: "Trois (3)", onyomi: "サン", kunyomi: "みっ-つ", strokes: 3, examples: [{ jp: "三日", r: "Mikka", fr: "Trois jours" }] },
+      "四": { meaning: "Quatre (4)", onyomi: "シ", kunyomi: "よん, よっ-つ", strokes: 5, examples: [{ jp: "四季", r: "Shiki", fr: "Quatre saisons" }] },
+      "五": { meaning: "Cinq (5)", onyomi: "ゴ", kunyomi: "いつ-つ", strokes: 4, examples: [{ jp: "五大", r: "Godai", fr: "Cinq grands" }] },
+      "六": { meaning: "Six (6)", onyomi: "ロク", kunyomi: "むっ-つ", strokes: 4, examples: [{ jp: "六月", r: "Rokugatsu", fr: "Juin" }] },
+      "七": { meaning: "Sept (7)", onyomi: "シチ", kunyomi: "なな-つ", strokes: 2, examples: [{ jp: "七日", r: "Nanoka", fr: "7 jours" }] },
+      "八": { meaning: "Huit (8)", onyomi: "ハチ", kunyomi: "やっ-つ", strokes: 2, examples: [{ jp: "八百屋", r: "Yaoya", fr: "Légumier" }] },
+      "九": { meaning: "Neuf (9)", onyomi: "キュウ, ク", kunyomi: "ここの-つ", strokes: 2, examples: [{ jp: "九月", r: "Kugatsu", fr: "Septembre" }] },
+      "十": { meaning: "Dix (10)", onyomi: "ジュウ", kunyomi: "とお", strokes: 2, examples: [{ jp: "十分", r: "Jyuubun", fr: "Suffisant" }] },
+      "人": { meaning: "Personne / Humain", onyomi: "ジン, ニン", kunyomi: "ひと", strokes: 2, examples: [{ jp: "日本人", r: "Nihonjin", fr: "Japonais (personne)" }] },
+      "名": { meaning: "Nom / Renommée", onyomi: "メイ, ミョウ", kunyomi: "な", strokes: 6, examples: [{ jp: "名前", r: "Namae", fr: "Nom" }] },
+      "前": { meaning: "Devant / Avant", onyomi: "ゼン", kunyomi: "まえ", strokes: 9, examples: [{ jp: "午前", r: "Gozen", fr: "Matin (AM)" }] },
+      "水": { meaning: "Eau", onyomi: "スイ", kunyomi: "みず", strokes: 4, examples: [{ jp: "水泳", r: "Suiei", fr: "Natation" }] },
+      "火": { meaning: "Feu", onyomi: "カ", kunyomi: "ひ", strokes: 4, examples: [{ jp: "火事", r: "Kaji", fr: "Incendie" }] },
+      "山": { meaning: "Montagne", onyomi: "サン", kunyomi: "やま", strokes: 3, examples: [{ jp: "富士山", r: "Fujisan", fr: "Mont Fuji" }] },
+      "川": { meaning: "Rivière", onyomi: "セン", kunyomi: "かわ", strokes: 3, examples: [{ jp: "小川", r: "Ogawa", fr: "Ruisseau" }] },
+      "本": { meaning: "Livre / Origine", onyomi: "ホン", kunyomi: "moto", strokes: 5, examples: [{ jp: "本屋", r: "Honya", fr: "Librairie" }] },
+      "車": { meaning: "Voiture / Roue", onyomi: "シャ", kunyomi: "くるま", strokes: 7, examples: [{ jp: "電車", r: "Densha", fr: "Train" }] },
+      "先": { meaning: "Précédent / Devancer", onyomi: "セン", kunyomi: "さき", strokes: 6, examples: [{ jp: "先生", r: "Sensei", fr: "Professeur / Maître" }] },
+      "生": { meaning: "Vie / Naître", onyomi: "セイ, ジョウ", kunyomi: "い-きる, う-まれる", strokes: 5, examples: [{ jp: "学生", r: "Gakusei", fr: "Étudiant" }] },
+      "道": { meaning: "Voie / Chemin", onyomi: "ドウ", kunyomi: "みち", strokes: 12, examples: [{ jp: "武道", r: "Budo", fr: "Arts Martiaux" }, { jp: "柔道", r: "Judo", fr: "Judo" }] },
+      "場": { meaning: "Lieu / Place", onyomi: "ジョウ", kunyomi: "ば", strokes: 12, examples: [{ jp: "道場", r: "Dojo", fr: "Lieu de la Voie / Salle" }] },
+      "礼": { meaning: "Salut / Politesse", onyomi: "レイ, ライ", kunyomi: "--", strokes: 5, examples: [{ jp: "礼儀", r: "Reigi", fr: "Étiquette" }] }
+    };
+
+    /* Helper: Wraps any Kanji found inside text into a clickable span */
+    function formatJapaneseTextWithClickableKanji(text) {
+      if (!text) return "";
+      let html = "";
+      for (let char of text) {
+        if (KANJI_DATABASE[char]) {
+          html += `<span class="kanji-clickable font-bold" onclick="event.stopPropagation(); inspectKanji('${char}')">${char}</span>`;
+        } else {
+          html += char;
+        }
+      }
+      return html;
+    }
+
+    /* Open Kanji Inspection Modal */
+    let currentInspectedKanji = null;
+    function inspectKanji(char) {
+      const data = KANJI_DATABASE[char];
+      if (!data) return;
+
+      currentInspectedKanji = char;
+      document.getElementById('modal-kanji-char').innerText = char;
+      document.getElementById('modal-kanji-meaning').innerText = data.meaning;
+      document.getElementById('modal-kanji-strokes').innerText = `${data.strokes} traits • JLPT N5`;
+      document.getElementById('modal-kanji-onyomi').innerText = data.onyomi;
+      document.getElementById('modal-kanji-kunyomi').innerText = data.kunyomi;
+
+      const exContainer = document.getElementById('modal-kanji-examples');
+      exContainer.innerHTML = '';
+      data.examples.forEach(ex => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs";
+        div.innerHTML = `
+          <div>
+            <span class="font-japanese font-bold text-shuiro-400">${ex.jp}</span>
+            <span class="text-slate-400 font-mono text-[10px] ml-1.5">(${ex.r})</span>
+          </div>
+          <span class="text-slate-300 font-medium">${ex.fr}</span>
+        `;
+        exContainer.appendChild(div);
+      });
+
+      document.getElementById('kanji-modal-overlay').classList.remove('hidden');
+      speakWord(char);
+    }
+
+    function closeKanjiModal() {
+      document.getElementById('kanji-modal-overlay').classList.add('hidden');
+    }
+
+    function speakCurrentModalKanji() {
+      if (currentInspectedKanji) speakWord(currentInspectedKanji);
+    }
+
+    /* ==========================================================================
+       2. CURRICULUM DATA STRUCTURE
+       ========================================================================== */
+    const CURRICULUM_DAYS = [
+      {
+        day: 1,
+        title: "Voyelles あいうえお & Chiffres 1 à 5",
+        phase: "Phase 1: Maternelle",
+        desc: "Apprenez les 5 voyelles de base du Hiragana ainsi que les kanjis des 5 premiers chiffres.",
+        items: [
+          { jp: "あ", r: "a", type: "Kana Hiragana", audio: "あ" },
+          { jp: "い", r: "i", type: "Kana Hiragana", audio: "い" },
+          { jp: "う", r: "u", type: "Kana Hiragana", audio: "う" },
+          { jp: "え", r: "e", type: "Kana Hiragana", audio: "え" },
+          { jp: "お", r: "o", type: "Kana Hiragana", audio: "お" },
+          { jp: "一", r: "ichi", type: "Kanji Chiffre (1)", audio: "いち" },
+          { jp: "二", r: "ni", type: "Kanji Chiffre (2)", audio: "に" },
+          { jp: "三", r: "san", type: "Kanji Chiffre (3)", audio: "さん" },
+          { jp: "四", r: "yon / shi", type: "Kanji Chiffre (4)", audio: "よん" },
+          { jp: "五", r: "go", type: "Kanji Chiffre (5)", audio: "ご" }
+        ],
+        quizQuestions: [
+          { prompt: "あ", q: "Prononciation du Kana あ ?", options: ["a", "i", "u", "e"], answer: "a" },
+          { prompt: "い", q: "Prononciation du Kana い ?", options: ["o", "i", "u", "a"], answer: "i" },
+          { prompt: "う", q: "Prononciation du Kana う ?", options: ["e", "a", "u", "o"], answer: "u" },
+          { prompt: "え", q: "Prononciation du Kana え ?", options: ["i", "e", "u", "a"], answer: "e" },
+          { prompt: "お", q: "Prononciation du Kana お ?", options: ["a", "o", "u", "i"], answer: "o" },
+          { prompt: "一", q: "Signification du Kanji 一 ?", options: ["Un (1)", "Deux (2)", "Trois (3)", "Cinq (5)"], answer: "Un (1)" },
+          { prompt: "二", q: "Signification du Kanji 二 ?", options: ["Un (1)", "Deux (2)", "Quatre (4)", "Trois (3)"], answer: "Deux (2)" },
+          { prompt: "三", q: "Signification du Kanji 三 ?", options: ["Trois (3)", "Cinq (5)", "Deux (2)", "Un (1)"], answer: "Trois (3)" },
+          { prompt: "四", q: "Signification du Kanji 四 ?", options: ["Deux (2)", "Quatre (4)", "Trois (3)", "Cinq (5)"], answer: "Quatre (4)" },
+          { prompt: "五", q: "Signification du Kanji 五 ?", options: ["Cinq (5)", "Quatre (4)", "Un (1)", "Trois (3)"], answer: "Cinq (5)" }
+        ]
+      },
+      {
+        day: 2,
+        title: "Ligne K (かきくけこ) & Salutations",
+        phase: "Phase 1: Maternelle",
+        desc: "Maîtrisez la ligne 'K' des Hiragana et les salutations essentielles du dojo et du quotidien.",
+        items: [
+          { jp: "か", r: "ka", type: "Kana Hiragana", audio: "か" },
+          { jp: "き", r: "ki", type: "Kana Hiragana", audio: "き" },
+          { jp: "く", r: "ku", type: "Kana Hiragana", audio: "く" },
+          { jp: "け", r: "ke", type: "Kana Hiragana", audio: "け" },
+          { jp: "こ", r: "ko", type: "Kana Hiragana", audio: "こ" },
+          { jp: "おはよう", r: "ohayou", type: "Salutation (Bonjour le matin)", audio: "おはよう" },
+          { jp: "ありがとう", r: "arigatou", type: "Expression (Merci)", audio: "ありがとう" },
+          { jp: "さようなら", r: "sayounara", type: "Salutation (Au revoir)", audio: "さようなら" }
+        ],
+        quizQuestions: [
+          { prompt: "か", q: "Prononciation du Kana か ?", options: ["ka", "ki", "ku", "ke"], answer: "ka" },
+          { prompt: "き", q: "Prononciation du Kana き ?", options: ["ko", "ki", "ku", "ka"], answer: "ki" },
+          { prompt: "く", q: "Prononciation du Kana く ?", options: ["ku", "ke", "ka", "ko"], answer: "ku" },
+          { prompt: "け", q: "Prononciation du Kana け ?", options: ["ki", "ke", "ka", "ku"], answer: "ke" },
+          { prompt: "こ", q: "Prononciation du Kana こ ?", options: ["ka", "ko", "ki", "ku"], answer: "ko" },
+          { prompt: "おはよう", q: "Que signifie 'おはよう' ?", options: ["Bonjour (Matin)", "Merci", "Au revoir", "Bonsoir"], answer: "Bonjour (Matin)" },
+          { prompt: "ありがとう", q: "Que signifie 'ありがとう' ?", options: ["Merci", "Bonjour", "Au revoir", "S'il vous plaît"], answer: "Merci" },
+          { prompt: "さようなら", q: "Que signifie 'さようなら' ?", options: ["Au revoir", "Merci", "Bonjour", "Oui"], answer: "Au revoir" }
+        ]
+      },
+      {
+        day: 3,
+        title: "Ligne S (さしすせそ) + Chiffres 6 à 10 + 人",
+        phase: "Phase 1: Maternelle",
+        desc: "Étudiez la ligne S, complétez les chiffres jusqu'à 10 et apprenez le kanji de la personne.",
+        items: [
+          { jp: "さ", r: "sa", type: "Kana Hiragana", audio: "さ" },
+          { jp: "し", r: "shi", type: "Kana Hiragana", audio: "し" },
+          { jp: "す", r: "su", type: "Kana Hiragana", audio: "す" },
+          { jp: "せ", r: "se", type: "Kana Hiragana", audio: "せ" },
+          { jp: "そ", r: "so", type: "Kana Hiragana", audio: "そ" },
+          { jp: "六", r: "roku", type: "Kanji (6)", audio: "ろく" },
+          { jp: "七", r: "nana / shichi", type: "Kanji (7)", audio: "なな" },
+          { jp: "八", r: "hachi", type: "Kanji (8)", audio: "はち" },
+          { jp: "九", r: "kyuu", type: "Kanji (9)", audio: "きゅう" },
+          { jp: "十", r: "juu", type: "Kanji (10)", audio: "じゅう" },
+          { jp: "人", r: "hito / jin", type: "Kanji (Personne / Humain)", audio: "ひと" }
+        ],
+        quizQuestions: [
+          { prompt: "さ", q: "Prononciation de さ ?", options: ["sa", "shi", "su", "se"], answer: "sa" },
+          { prompt: "し", q: "Prononciation de し ?", options: ["shi", "sa", "su", "so"], answer: "shi" },
+          { prompt: "す", q: "Prononciation de す ?", options: ["se", "su", "sa", "so"], answer: "su" },
+          { prompt: "せ", q: "Prononciation de せ ?", options: ["su", "se", "sa", "shi"], answer: "se" },
+          { prompt: "そ", q: "Prononciation de そ ?", options: ["so", "sa", "su", "se"], answer: "so" },
+          { prompt: "六", q: "Valeur de 六 ?", options: ["6", "7", "8", "9"], answer: "6" },
+          { prompt: "七", q: "Valeur de 七 ?", options: ["7", "6", "8", "10"], answer: "7" },
+          { prompt: "八", q: "Valeur de 八 ?", options: ["8", "9", "6", "7"], answer: "8" },
+          { prompt: "九", q: "Valeur de 九 ?", options: ["9", "8", "10", "6"], answer: "9" },
+          { prompt: "十", q: "Valeur de 十 ?", options: ["10", "9", "8", "7"], answer: "10" },
+          { prompt: "人", q: "Sens du Kanji 人 ?", options: ["Personne / Humain", "Lumière", "Montagne", "Eau"], answer: "Personne / Humain" }
+        ]
+      },
+      {
+        day: 4,
+        title: "Ligne T (たちつてと) & Présentations (名前, です)",
+        phase: "Phase 1: Maternelle",
+        desc: "Découvrez la ligne T et les termes essentiels pour se présenter.",
+        items: [
+          { jp: "た", r: "ta", type: "Kana Hiragana", audio: "た" },
+          { jp: "ち", r: "chi", type: "Kana Hiragana", audio: "ち" },
+          { jp: "つ", r: "tsu", type: "Kana Hiragana", audio: "つ" },
+          { jp: "て", r: "te", type: "Kana Hiragana", audio: "て" },
+          { jp: "と", r: "to", type: "Kana Hiragana", audio: "と" },
+          { jp: "わたし", r: "watashi", type: "Pronom (Moi / Je)", audio: "わたし" },
+          { jp: "あなた", r: "anata", type: "Pronom (Toi / Vous)", audio: "あなた" },
+          { jp: "名前", r: "namae", type: "Nom (Nom / Prénom)", audio: "なまえ" },
+          { jp: "です", r: "desu", type: "Auxiliaire (Être / Politesse)", audio: "です" }
+        ],
+        quizQuestions: [
+          { prompt: "た", q: "Prononciation de た ?", options: ["ta", "chi", "tsu", "te"], answer: "ta" },
+          { prompt: "ち", q: "Prononciation de ち ?", options: ["chi", "ta", "tsu", "to"], answer: "chi" },
+          { prompt: "つ", q: "Prononciation de つ ?", options: ["tsu", "te", "to", "ta"], answer: "tsu" },
+          { prompt: "て", q: "Prononciation de て ?", options: ["te", "tsu", "to", "chi"], answer: "te" },
+          { prompt: "と", q: "Prononciation de と ?", options: ["to", "ta", "chi", "te"], answer: "to" },
+          { prompt: "わたし", q: "Que signifie わたし ?", options: ["Moi / Je", "Toi", "Il", "Nom"], answer: "Moi / Je" },
+          { prompt: "あなた", q: "Que signifie あなた ?", options: ["Toi / Vous", "Moi", "Ami", "Professeur"], answer: "Toi / Vous" },
+          { prompt: "名前", q: "Que signifie 名前 (namae) ?", options: ["Nom / Prénom", "Âge", "Pays", "Maison"], answer: "Nom / Prénom" },
+          { prompt: "です", q: "Rôle de です (desu) ?", options: ["C'est / Être (Forme polie)", "Avoir", "Aller", "Non"], answer: "C'est / Être (Forme polie)" }
+        ]
+      },
+      {
+        day: 5,
+        title: "Ligne N (なにぬねの) & Particules は et の",
+        phase: "Phase 1: Maternelle",
+        desc: "Ligne N du Hiragana et introduction des deux premières particules de grammaire.",
+        items: [
+          { jp: "な", r: "na", type: "Kana Hiragana", audio: "な" },
+          { jp: "に", r: "ni", type: "Kana Hiragana", audio: "に" },
+          { jp: "ぬ", r: "nu", type: "Kana Hiragana", audio: "ぬ" },
+          { jp: "ね", r: "ne", type: "Kana Hiragana", audio: "ね" },
+          { jp: "の", r: "no", type: "Kana Hiragana", audio: "の" },
+          { jp: "は", r: "wa (thème)", type: "Particule de Thème", audio: "わ" },
+          { jp: "の", r: "no (possession)", type: "Particule de Possession", audio: "の" }
+        ],
+        quizQuestions: [
+          { prompt: "な", q: "Prononciation de な ?", options: ["na", "ni", "nu", "ne"], answer: "na" },
+          { prompt: "に", q: "Prononciation de に ?", options: ["ni", "na", "no", "nu"], answer: "ni" },
+          { prompt: "ぬ", q: "Prononciation de ぬ ?", options: ["nu", "ne", "no", "na"], answer: "nu" },
+          { prompt: "ね", q: "Prononciation de ね ?", options: ["ne", "nu", "na", "no"], answer: "ne" },
+          { prompt: "の", q: "Prononciation du Kana の ?", options: ["no", "ne", "na", "ni"], answer: "no" },
+          { prompt: "は", q: "Rôle grammatical de la particule は (prononcée wa) ?", options: ["Marque le Thème principal de la phrase", "Marque le lieu", "Marque le temps", "Inconnu"], answer: "Marque le Thème principal de la phrase" },
+          { prompt: "の", q: "Rôle de la particule の entre deux noms ?", options: ["Indique la Possession ou le lien ('de')", "Indique le futur", "Indique l'interrogation", "Marque le sujet"], answer: "Indique la Possession ou le lien ('de')" }
+        ]
+      }
+    ];
+
+    // Generate remaining days 6 to 30 dynamically
+    for (let d = 6; d <= 30; d++) {
+      let title = `Jour ${d} : `;
+      let items = [];
+      let quizQuestions = [];
+
+      if (d === 6) {
+        title += "Ligne H & Éléments Naturels (水, 火, 山, 川)";
+        items = [
+          { jp: "は", r: "ha", type: "Kana Hiragana", audio: "は" },
+          { jp: "ひ", r: "hi", type: "Kana Hiragana", audio: "ひ" },
+          { jp: "水", r: "mizu", type: "Kanji (Eau)", audio: "みず" },
+          { jp: "火", r: "hi", type: "Kanji (Feu)", audio: "ひ" },
+          { jp: "山", r: "yama", type: "Kanji (Montagne)", audio: "やま" },
+          { jp: "川", r: "kawa", type: "Kanji (Rivière)", audio: "かわ" }
+        ];
+      } else if (d === 7) {
+        title += "Ligne M & Mots du Quotidien (本, 車, 先生)";
+        items = [
+          { jp: "ま", r: "ma", type: "Kana Hiragana", audio: "ま" },
+          { jp: "み", r: "mi", type: "Kana Hiragana", audio: "み" },
+          { jp: "本", r: "hon", type: "Kanji (Livre)", audio: "ほん" },
+          { jp: "車", r: "kuruma", type: "Kanji (Voiture)", audio: "くるま" },
+          { jp: "先生", r: "sensei", type: "Mot (Professeur / Maître)", audio: "せんせい" }
+        ];
+      } else {
+        title += d <= 12 ? `Ligne Kana & Vocabulaire ${d}` : (d <= 20 ? `Kanjis N5 & Verbes ${d}` : `Grammaire & Expressions ${d}`);
+        items = [
+          { jp: `item_${d}_1`, r: `romaji_${d}_1`, type: "Kana / Kanji", audio: "あ" },
+          { jp: `item_${d}_2`, r: `romaji_${d}_2`, type: "Vocabulaire", audio: "い" }
+        ];
+      }
+
+      items.forEach(it => {
+        quizQuestions.push({
+          prompt: it.jp,
+          q: `Question sur l'item : ${it.jp} (${it.type}) ?`,
+          options: [it.r, "Choix A", "Choix B", "Choix C"],
+          answer: it.r
+        });
+      });
+
+      CURRICULUM_DAYS.push({
+        day: d,
+        title: title,
+        phase: d <= 10 ? "Phase 2: Kanas & Kanjis de base" : (d <= 20 ? "Phase 3: Syntaxe & Verbes" : "Phase 4: Consolidation N5"),
+        desc: `Leçon progressive du Jour ${d}. Répondez à 100% des questions pour débloquer le jour suivant.`,
+        items: items,
+        quizQuestions: quizQuestions
+      });
+    }
+
+    const ALL_KANAS_FLAT = [
+      { k: 'あ', r: 'a', t: 'hira' }, { k: 'い', r: 'i', t: 'hira' }, { k: 'う', r: 'u', t: 'hira' }, { k: 'え', r: 'e', t: 'hira' }, { k: 'お', r: 'o', t: 'hira' },
+      { k: 'か', r: 'ka', t: 'hira' }, { k: 'き', r: 'ki', t: 'hira' }, { k: 'く', r: 'ku', t: 'hira' }, { k: 'け', r: 'ke', t: 'hira' }, { k: 'こ', r: 'ko', t: 'hira' },
+      { k: 'さ', r: 'sa', t: 'hira' }, { k: 'し', r: 'shi', t: 'hira' }, { k: 'す', r: 'su', t: 'hira' }, { k: 'せ', r: 'se', t: 'hira' }, { k: 'そ', r: 'so', t: 'hira' },
+      { k: 'た', r: 'ta', t: 'hira' }, { k: 'ち', r: 'chi', t: 'hira' }, { k: 'つ', r: 'tsu', t: 'hira' }, { k: 'て', r: 'te', t: 'hira' }, { k: 'と', r: 'to', t: 'hira' },
+      { k: 'ア', r: 'a', t: 'kata' }, { k: 'イ', r: 'i', t: 'kata' }, { k: 'ウ', r: 'u', t: 'kata' }, { k: 'エ', r: 'e', t: 'kata' }, { k: 'オ', r: 'o', t: 'kata' }
+    ];
+
+    const DICTIONARY_DATA = [
+      { kanji: '一', r: 'Ichi', fr: 'Un (1)', cat: 'Chiffre' },
+      { kanji: '二', r: 'Ni', fr: 'Deux (2)', cat: 'Chiffre' },
+      { kanji: '三', r: 'San', fr: 'Trois (3)', cat: 'Chiffre' },
+      { kanji: '先生', r: 'Sensei', fr: 'Professeur / Maître', cat: 'Dojo & Culture' },
+      { kanji: '道場', r: 'Dojo', fr: 'Lieu de la Voie / Salle d\'entraînement', cat: 'Dojo & Culture' },
+      { kanji: '礼', r: 'Rei', fr: 'Salut / Politeness', cat: 'Dojo & Culture' },
+      { kanji: '水', r: 'Mizu', fr: 'Eau', cat: 'Nature' },
+      { kanji: '火', r: 'Hi', fr: 'Feu', cat: 'Nature' },
+      { kanji: '山', r: 'Yama', fr: 'Montagne', cat: 'Nature' },
+      { kanji: '川', r: 'Kawa', fr: 'Rivière', cat: 'Nature' }
+    ];
+
+    /* ==========================================================================
+       3. STATE & LOCAL STORAGE
+       ========================================================================== */
+    let xp = parseInt(localStorage.getItem('ns_xp') || '0');
+    let streak = parseInt(localStorage.getItem('ns_streak') || '1');
+    let unlockedDays = parseInt(localStorage.getItem('ns_unlocked_days') || '1');
+
+    let activeDayObj = null;
+    let currentQuizIndex = 0;
+    let currentQuizScore = 0;
+
+    let practiceCount = 50;
+    let practiceFilter = 'hiragana';
+    let practiceMode = 'visual';
+    let practiceCurrentIndex = 0;
+    let practiceCorrectCount = 0;
+    let practiceTargetKana = null;
+
+    /* ==========================================================================
+       4. SYSTEM UTILS (SPEECH, NAVIGATION, XP)
+       ========================================================================== */
+    function switchTab(tab) {
+      document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('bg-slate-800', 'text-shuiro-400', 'border', 'border-slate-700');
+        b.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`sec-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      activeBtn.classList.remove('text-slate-400');
+      activeBtn.classList.add('bg-slate-800', 'text-shuiro-400', 'border', 'border-slate-700');
+
+      if (tab === 'curriculum') renderCurriculumGrid();
+      if (tab === 'practice') restartPracticeSession();
+      if (tab === 'kanji') renderKanjiVocab();
+      if (tab === 'grammar') setupSentenceBuilder();
+      if (tab === 'profile') renderProfile();
+    }
+
+    function addXP(pts) {
+      xp += pts;
+      localStorage.setItem('ns_xp', xp.toString());
+      document.getElementById('user-xp').innerText = `${xp} XP`;
+    }
+
+    function speakWord(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 0.85;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    /* ==========================================================================
+       5. CURRICULUM & 100% UNLOCK LOGIC
+       ========================================================================== */
+    function renderCurriculumGrid() {
+      document.getElementById('curriculum-completion-text').innerText = `${unlockedDays} / 30`;
+      const grid = document.getElementById('curriculum-grid');
+      grid.innerHTML = '';
+
+      CURRICULUM_DAYS.forEach(d => {
+        const isUnlocked = d.day <= unlockedDays;
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-2xl border transition shadow flex items-center justify-between gap-3 ${
+          isUnlocked ? 'bg-slate-900 border-slate-800 hover:border-shuiro-500 cursor-pointer' : 'bg-slate-950/60 border-slate-900/60 opacity-60'
+        }`;
+
+        if (isUnlocked) card.onclick = () => openDayLesson(d);
+
+        card.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
+              isUnlocked ? 'bg-shuiro-600 text-white shadow-lg shadow-shuiro-900/40' : 'bg-slate-800 text-slate-500'
+            }">
+              J${d.day}
+            </div>
+            <div class="min-w-0">
+              <span class="text-[10px] text-slate-500 uppercase font-mono block truncate">${d.phase}</span>
+              <h4 class="text-xs font-bold text-white truncate">${d.title}</h4>
+              <span class="text-[10px] text-amber-400 font-mono block truncate">${d.quizQuestions.length} Questions (100% requis)</span>
+            </div>
+          </div>
+          <div class="shrink-0">
+            ${isUnlocked ? '<i class="fa-solid fa-chevron-right text-shuiro-400 text-xs"></i>' : '<i class="fa-solid fa-lock text-slate-600 text-xs"></i>'}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openDayLesson(dayObj) {
+      activeDayObj = dayObj;
+      document.getElementById('day-active-panel').classList.remove('hidden');
+      document.getElementById('active-day-badge').innerText = `JOUR ${dayObj.day}`;
+      document.getElementById('active-day-title').innerText = dayObj.title;
+      switchDayStep('discovery');
+    }
+
+    function closeActiveDayLesson() {
+      document.getElementById('day-active-panel').classList.add('hidden');
+    }
+
+    function switchDayStep(step) {
+      document.getElementById('step-panel-discovery').classList.add('hidden');
+      document.getElementById('step-panel-validation').classList.add('hidden');
+
+      document.getElementById('step-btn-discovery').className = "flex-1 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white";
+      document.getElementById('step-btn-validation').className = "flex-1 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white";
+
+      document.getElementById(`step-panel-${step}`).classList.remove('hidden');
+      document.getElementById(`step-btn-${step}`).className = "flex-1 py-2.5 border-b-2 border-shuiro-500 text-shuiro-400 font-bold";
+
+      if (step === 'discovery') {
+        renderDayDiscovery();
+      } else if (step === 'validation') {
+        startDayQuiz();
+      }
+    }
+
+    function renderDayDiscovery() {
+      document.getElementById('discovery-description').innerText = activeDayObj.desc;
+      const grid = document.getElementById('day-items-grid');
+      grid.innerHTML = '';
+
+      activeDayObj.items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3 min-h-[64px] h-auto";
+        
+        // Make kanji clickable in item display
+        const formattedJp = formatJapaneseTextWithClickableKanji(it.jp);
+
+        card.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0">
+            <div class="px-3 py-2 bg-slate-900 rounded-lg flex items-center justify-center font-japanese text-xl font-bold text-shuiro-400 border border-slate-800 shrink-0 min-w-[48px] h-auto">
+              ${formattedJp}
+            </div>
+            <div class="min-w-0">
+              <h5 class="text-xs font-bold text-white jp-text-wrap">${formattedJp} <span class="text-amber-400 font-mono">(${it.r})</span></h5>
+              <span class="text-[10px] text-slate-500 block truncate">${it.type}</span>
+            </div>
+          </div>
+          <button onclick="speakWord('${it.audio || it.jp}')" class="text-amber-400 hover:text-amber-300 p-2 text-xs shrink-0">
+            <i class="fa-solid fa-volume-high"></i>
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    /* DAY QUIZ */
+    function startDayQuiz() {
+      currentQuizIndex = 0;
+      currentQuizScore = 0;
+      document.getElementById('day-quiz-summary').classList.add('hidden');
+      document.getElementById('day-quiz-card').classList.remove('hidden');
+      document.getElementById('quiz-total-num').innerText = activeDayObj.quizQuestions.length;
+      loadDayQuizQuestion();
+    }
+
+    function loadDayQuizQuestion() {
+      if (currentQuizIndex >= activeDayObj.quizQuestions.length) {
+        finishDayQuiz();
+        return;
+      }
+
+      const qObj = activeDayObj.quizQuestions[currentQuizIndex];
+      document.getElementById('quiz-question-num').innerText = currentQuizIndex + 1;
+      document.getElementById('quiz-score-val').innerText = currentQuizScore;
+
+      // Clickable Kanji in Quiz Prompt
+      document.getElementById('day-quiz-prompt').innerHTML = formatJapaneseTextWithClickableKanji(qObj.prompt);
+      document.getElementById('day-quiz-question-text').innerText = qObj.q;
+
+      const optsGrid = document.getElementById('day-quiz-options');
+      optsGrid.innerHTML = '';
+
+      const shuffledOpts = [...qObj.options].sort(() => 0.5 - Math.random());
+      shuffledOpts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "py-3 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-shuiro-500/50 rounded-xl text-xs font-bold text-white transition h-auto min-h-[48px] flex items-center justify-center text-center jp-text-wrap";
+        btn.innerText = opt;
+        btn.onclick = () => answerDayQuizQuestion(opt === qObj.answer);
+        optsGrid.appendChild(btn);
+      });
+
+      speakWord(qObj.prompt);
+    }
+
+    function answerDayQuizQuestion(isCorrect) {
+      if (isCorrect) currentQuizScore++;
+      currentQuizIndex++;
+      loadDayQuizQuestion();
+    }
+
+    function finishDayQuiz() {
+      document.getElementById('day-quiz-card').classList.add('hidden');
+      const summary = document.getElementById('day-quiz-summary');
+      summary.classList.remove('hidden');
+
+      const total = activeDayObj.quizQuestions.length;
+      const isPerfect = currentQuizScore === total;
+
+      const iconBox = document.getElementById('summary-icon');
+      const title = document.getElementById('summary-title');
+      const desc = document.getElementById('summary-desc');
+      const nextBtn = document.getElementById('summary-next-btn');
+
+      if (isPerfect) {
+        iconBox.className = "w-16 h-16 rounded-full flex items-center justify-center text-3xl mx-auto bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        iconBox.innerHTML = `<i class="fa-solid fa-trophy"></i>`;
+        title.innerText = "PERFECT ! 100% DE RÉUSSITE !";
+        desc.innerHTML = `Vous avez obtenu <strong class="text-emerald-400">${currentQuizScore} / ${total}</strong>.<br>Le Jour suivant est automatiquement débloqué ! (+25 XP)`;
+        addXP(25);
+
+        if (activeDayObj.day === unlockedDays && unlockedDays < 30) {
+          unlockedDays++;
+          localStorage.setItem('ns_unlocked_days', unlockedDays.toString());
+        }
+        nextBtn.classList.remove('hidden');
+      } else {
+        iconBox.className = "w-16 h-16 rounded-full flex items-center justify-center text-3xl mx-auto bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        iconBox.innerHTML = `<i class="fa-solid fa-rotate-right"></i>`;
+        title.innerText = "Score : " + Math.round((currentQuizScore/total)*100) + "%";
+        desc.innerHTML = `Vous avez obtenu <strong>${currentQuizScore} / ${total}</strong>. Le score de 100% est requis pour débloquer le jour suivant. Réessayez !`;
+        nextBtn.classList.add('hidden');
+      }
+    }
+
+    /* ==========================================================================
+       6. DOJO KANAS
+       ========================================================================== */
+    function setPracticeCount(cnt) {
+      practiceCount = cnt;
+      [10, 20, 50].forEach(c => {
+        document.getElementById(`count-${c}`).className = c === cnt ? 'px-2.5 py-1 rounded-lg transition bg-shuiro-600 text-white' : 'px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white';
+      });
+      restartPracticeSession();
+    }
+
+    function setPracticeFilter(filter) {
+      practiceFilter = filter;
+      document.getElementById('filter-hira').className = filter === 'hiragana' ? 'px-3 py-1 rounded-lg transition bg-shuiro-600 text-white' : 'px-3 py-1 rounded-lg transition text-slate-400 hover:text-white';
+      document.getElementById('filter-kata').className = filter === 'katakana' ? 'px-3 py-1 rounded-lg transition bg-shuiro-600 text-white' : 'px-3 py-1 rounded-lg transition text-slate-400 hover:text-white';
+      document.getElementById('filter-both').className = filter === 'both' ? 'px-3 py-1 rounded-lg transition bg-shuiro-600 text-white' : 'px-3 py-1 rounded-lg transition text-slate-400 hover:text-white';
+      restartPracticeSession();
+    }
+
+    function setPracticeMode(mode) {
+      practiceMode = mode;
+      ['visual', 'audio', 'writing'].forEach(m => {
+        document.getElementById(`mode-btn-${m}`).className = m === mode ? "px-2.5 py-1 rounded-lg bg-slate-800 text-shuiro-300 font-bold" : "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white";
+        document.getElementById(`panel-${m}`).classList.toggle('hidden', m !== mode);
+      });
+      if (mode === 'writing') initPracticeCanvas();
+      loadNextPracticeQuestion();
+    }
+
+    function restartPracticeSession() {
+      practiceCurrentIndex = 0;
+      practiceCorrectCount = 0;
+      document.getElementById('practice-summary-modal').classList.add('hidden');
+      document.getElementById('practice-card').classList.remove('hidden');
+      loadNextPracticeQuestion();
+    }
+
+    function loadNextPracticeQuestion() {
+      if (practiceCurrentIndex >= practiceCount) {
+        showPracticeSummary();
+        return;
+      }
+
+      practiceTargetKana = ALL_KANAS_FLAT[Math.floor(Math.random() * ALL_KANAS_FLAT.length)];
+      document.getElementById('practice-counter').innerText = `${practiceCurrentIndex + 1} / ${practiceCount}`;
+      document.getElementById('practice-score').innerText = `Score: ${practiceCorrectCount}`;
+      document.getElementById('practice-progress-bar').style.width = `${Math.round(((practiceCurrentIndex + 1) / practiceCount) * 100)}%`;
+
+      document.getElementById('practice-feedback').classList.add('hidden');
+
+      if (practiceMode === 'visual') {
+        document.getElementById('visual-prompt-kana').innerText = practiceTargetKana.k;
+        renderVisualOptions();
+      } else if (practiceMode === 'audio') {
+        renderAudioOptions();
+        speakWord(practiceTargetKana.k);
+      } else if (practiceMode === 'writing') {
+        document.getElementById('writing-prompt-romaji').innerText = practiceTargetKana.r;
+        document.getElementById('writing-solution-kana').innerText = practiceTargetKana.k;
+        clearPracticeCanvas();
+      }
+    }
+
+    function renderVisualOptions() {
+      let choices = [practiceTargetKana];
+      while (choices.length < 4) {
+        const rand = ALL_KANAS_FLAT[Math.floor(Math.random() * ALL_KANAS_FLAT.length)];
+        if (!choices.some(c => c.r === rand.r)) choices.push(rand);
+      }
+      choices.sort(() => 0.5 - Math.random());
+
+      const grid = document.getElementById('visual-options-grid');
+      grid.innerHTML = '';
+      choices.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = "py-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-white font-mono font-bold h-auto min-h-[48px] flex items-center justify-center";
+        btn.innerText = c.r;
+        btn.onclick = () => validatePracticeAnswer(c.r === practiceTargetKana.r);
+        grid.appendChild(btn);
+      });
+    }
+
+    function renderAudioOptions() {
+      let choices = [practiceTargetKana];
+      while (choices.length < 4) {
+        const rand = ALL_KANAS_FLAT[Math.floor(Math.random() * ALL_KANAS_FLAT.length)];
+        if (!choices.some(c => c.k === rand.k)) choices.push(rand);
+      }
+      choices.sort(() => 0.5 - Math.random());
+
+      const grid = document.getElementById('audio-options-grid');
+      grid.innerHTML = '';
+      choices.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = "py-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-white font-japanese text-2xl font-bold h-auto min-h-[48px] flex items-center justify-center";
+        btn.innerText = c.k;
+        btn.onclick = () => validatePracticeAnswer(c.k === practiceTargetKana.k);
+        grid.appendChild(btn);
+      });
+    }
+
+    function validatePracticeAnswer(isCorrect) {
+      const fb = document.getElementById('practice-feedback');
+      fb.classList.remove('hidden', 'bg-emerald-900', 'text-emerald-200', 'bg-rose-900', 'text-rose-200');
+
+      if (isCorrect) {
+        practiceCorrectCount++;
+        fb.classList.add('bg-emerald-900', 'text-emerald-200');
+        fb.innerHTML = `<i class="fa-solid fa-check-circle"></i> Correct (+2 XP)`;
+        addXP(2);
+      } else {
+        fb.classList.add('bg-rose-900', 'text-rose-200');
+        fb.innerHTML = `<i class="fa-solid fa-times-circle"></i> Incorrect (${practiceTargetKana.k} = ${practiceTargetKana.r})`;
+      }
+
+      practiceCurrentIndex++;
+      setTimeout(loadNextPracticeQuestion, 1000);
+    }
+
+    function playPracticeAudioPrompt() {
+      if (practiceTargetKana) speakWord(practiceTargetKana.k);
+    }
+
+    function speakCurrentPracticePrompt() {
+      if (practiceTargetKana) speakWord(practiceTargetKana.k);
+    }
+
+    function showPracticeSummary() {
+      document.getElementById('practice-card').classList.add('hidden');
+      document.getElementById('practice-summary-modal').classList.remove('hidden');
+      document.getElementById('summary-final-score').innerText = `Score : ${practiceCorrectCount} / ${practiceCount}`;
+      document.getElementById('summary-xp-gain').innerText = `+${practiceCorrectCount * 2 + 10} XP gagnés !`;
+      addXP(10);
+    }
+
+    /* CANVAS DRAWING */
+    let practiceCanvas, practiceCtx, isDrawing = false;
+    function initPracticeCanvas() {
+      practiceCanvas = document.getElementById('practice-canvas');
+      if (!practiceCanvas) return;
+      practiceCtx = practiceCanvas.getContext('2d');
+      practiceCtx.lineWidth = 10;
+      practiceCtx.lineCap = 'round';
+      practiceCtx.strokeStyle = '#f43f5e';
+
+      practiceCanvas.addEventListener('mousedown', () => isDrawing = true);
+      practiceCanvas.addEventListener('mouseup', () => isDrawing = false);
+      practiceCanvas.addEventListener('mousemove', drawCanvas);
+
+      practiceCanvas.addEventListener('touchstart', (e) => { isDrawing = true; drawCanvasTouch(e); });
+      practiceCanvas.addEventListener('touchend', () => isDrawing = false);
+      practiceCanvas.addEventListener('touchmove', drawCanvasTouch);
+    }
+
+    function drawCanvas(e) {
+      if (!isDrawing) return;
+      const rect = practiceCanvas.getBoundingClientRect();
+      practiceCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      practiceCtx.stroke();
+      practiceCtx.beginPath();
+      practiceCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+
+    function drawCanvasTouch(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const rect = practiceCanvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      practiceCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+      practiceCtx.stroke();
+      practiceCtx.beginPath();
+      practiceCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    }
+
+    function clearPracticeCanvas() {
+      if (practiceCtx) practiceCtx.clearRect(0, 0, practiceCanvas.width, practiceCanvas.height);
+    }
+
+    function toggleWritingSolution() {
+      document.getElementById('writing-solution-box').classList.toggle('hidden');
+    }
+
+    /* ==========================================================================
+       7. LEXICON & GRAMMAR BUILDER
+       ========================================================================== */
+    function renderKanjiVocab() {
+      const grid = document.getElementById('kanji-vocab-grid');
+      grid.innerHTML = '';
+      DICTIONARY_DATA.forEach(v => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 min-h-[72px] h-auto";
+        
+        const formattedKanji = formatJapaneseTextWithClickableKanji(v.kanji);
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0">
+            <div class="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-center font-japanese text-xl sm:text-2xl font-black text-shuiro-400 shrink-0 min-w-[52px] h-auto">
+              ${formattedKanji}
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-white jp-text-wrap">${v.fr}</h4>
+              <p class="text-[11px] font-mono text-amber-400 truncate">${v.r} • <span class="text-slate-500">${v.cat}</span></p>
+            </div>
+          </div>
+          <button onclick="speakWord('${v.kanji}')" class="text-amber-400 text-xs hover:text-white p-2 shrink-0"><i class="fa-solid fa-volume-high"></i></button>
+        `;
+        grid.appendChild(item);
+      });
+    }
+
+    function filterVocabList() {
+      const q = document.getElementById('vocab-search').value.toLowerCase();
+      const grid = document.getElementById('kanji-vocab-grid');
+      grid.innerHTML = '';
+      DICTIONARY_DATA.filter(v => v.kanji.includes(q) || v.r.toLowerCase().includes(q) || v.fr.toLowerCase().includes(q)).forEach(v => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 min-h-[72px] h-auto";
+        
+        const formattedKanji = formatJapaneseTextWithClickableKanji(v.kanji);
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0">
+            <div class="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-center font-japanese text-xl sm:text-2xl font-black text-shuiro-400 shrink-0 min-w-[52px] h-auto">
+              ${formattedKanji}
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-white jp-text-wrap">${v.fr}</h4>
+              <p class="text-[11px] font-mono text-amber-400 truncate">${v.r}</p>
+            </div>
+          </div>
+          <button onclick="speakWord('${v.kanji}')" class="text-amber-400 text-xs shrink-0"><i class="fa-solid fa-volume-high"></i></button>
+        `;
+        grid.appendChild(item);
+      });
+    }
+
+    let selectedBuilderWords = [];
+    function setupSentenceBuilder() {
+      selectedBuilderWords = [];
+      const dropzone = document.getElementById('sentence-dropzone');
+      dropzone.innerHTML = `<span class="text-xs text-slate-600 italic px-2">Sélectionnez les mots...</span>`;
+
+      const wordBank = document.getElementById('word-bank');
+      wordBank.innerHTML = '';
+      ["わたし", "は", "たなか", "です"].forEach(word => {
+        const btn = document.createElement('button');
+        btn.className = "bg-slate-800 hover:bg-slate-700 text-white text-xs px-3.5 py-2 rounded-xl border border-slate-700 font-japanese h-auto";
+        btn.innerText = word;
+        btn.onclick = () => {
+          selectedBuilderWords.push(word);
+          renderSentenceDropzone();
+        };
+        wordBank.appendChild(btn);
+      });
+    }
+
+    function renderSentenceDropzone() {
+      const dropzone = document.getElementById('sentence-dropzone');
+      dropzone.innerHTML = '';
+      if (selectedBuilderWords.length === 0) {
+        dropzone.innerHTML = `<span class="text-xs text-slate-600 italic px-2">Sélectionnez les mots...</span>`;
+        return;
+      }
+      selectedBuilderWords.forEach((w, idx) => {
+        const tag = document.createElement('span');
+        tag.className = "bg-shuiro-600/30 text-shuiro-300 border border-shuiro-500/40 text-xs font-japanese font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer";
+        tag.innerHTML = `${formatJapaneseTextWithClickableKanji(w)} <i class="fa-solid fa-xmark text-[10px] text-slate-400 hover:text-white" onclick="event.stopPropagation(); removeBuilderWord(${idx})"></i>`;
+        dropzone.appendChild(tag);
+      });
+    }
+
+    function removeBuilderWord(index) {
+      selectedBuilderWords.splice(index, 1);
+      renderSentenceDropzone();
+    }
+
+    function checkSentence() {
+      const fb = document.getElementById('builder-feedback');
+      fb.classList.remove('hidden');
+      if (selectedBuilderWords.join(' ') === "わたし は たなか です") {
+        fb.className = "p-3 bg-emerald-900 text-emerald-200 rounded-xl text-xs font-bold";
+        fb.innerText = "Exact ! Structure SOV correcte (+10 XP) !";
+        addXP(10);
+      } else {
+        fb.className = "p-3 bg-rose-900 text-rose-200 rounded-xl text-xs font-bold";
+        fb.innerText = "Ordre incorrect. Rappel : Sujet + は + Objet / Nom + です";
+      }
+    }
+
+    function resetSentenceBuilder() {
+      setupSentenceBuilder();
+      document.getElementById('builder-feedback').classList.add('hidden');
+    }
+
+    function renderProfile() {
+      document.getElementById('profile-xp-val').innerText = xp;
+      document.getElementById('profile-unlocked-days').innerText = `${unlockedDays} / 30`;
+      document.getElementById('profile-streak-val').innerText = `${streak} J`;
+    }
+
+    function resetAllProgress() {
+      if (confirm("Réinitialiser toute votre progression ?")) {
+        localStorage.clear();
+        xp = 0; streak = 1; unlockedDays = 1;
+        renderCurriculumGrid();
+        renderProfile();
+      }
+    }
+
+    /* PWA PROMPT */
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function triggerPWAInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+      } else {
+        alert("L'application Nihongo Sensei est prête et installable sur votre écran d'accueil !");
+      }
+    }
+
+    window.onload = function() {
+      document.getElementById('user-xp').innerText = `${xp} XP`;
+      document.getElementById('user-streak').innerText = `${streak} J`;
+      renderCurriculumGrid();
+    };
+  </script>
+</body>
+</html>
