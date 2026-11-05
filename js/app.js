@@ -600,7 +600,7 @@ function rendDico() {
   const kanaEcrit = el => contientKanji(el.raw) ? `<span class="ecrit">${esc(el.kana)}</span>` : '';
   const max = groupe ? res.length : dicoMax;
   let catCourante = '';
-  const intro = groupe && !q ? `<p class="petit" style="padding:0 2px">Le vocabulaire du dōjō, avec sa lecture et sa prononciation. Certains termes et noms de katas varient d'une école à l'autre : suis ce qu'on enseigne dans la tienne.</p>` : '';
+  const intro = dicoFiltre === 'karate' && !q ? `<p class="petit" style="padding:0 2px">Le vocabulaire du dōjō, avec sa lecture et sa prononciation. Certains termes et noms de katas varient d'une école à l'autre : suis ce qu'on enseigne dans la tienne.</p>` : '';
   zone.innerHTML = intro + res.slice(0, max).map(({ t, el }) => {
     if (t === 'kana') {
       const tete = groupe && el.cat !== catCourante ? `<h3 class="titre-sec">${esc(el.cat)}</h3>` : '';
