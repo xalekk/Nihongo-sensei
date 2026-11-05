@@ -136,6 +136,7 @@ function voirParcours() {
     <div class="barre"><i style="width:${Math.max(pct, 1)}%"></i></div>
     <p class="petit" style="margin-top:10px">Environ 15 minutes par jour. Une erreur au quiz ? La question revient à la fin : tu finis quand tout est bon, et le jour suivant se débloque aussitôt.</p>
     ${reglagesHtml()}
+    ${boutonInstaller()}
   </div>`;
 
   ETAPES.forEach(et => {
@@ -166,6 +167,8 @@ function voirParcours() {
   });
   vue.innerHTML = h;
   brancheReglages();
+  const inst = document.getElementById('installer');
+  if (inst) inst.addEventListener('click', installer);
   vue.querySelectorAll('[data-etape]').forEach(b => b.addEventListener('click', () => {
     const n = +b.dataset.etape;
     etapesOuvertes.has(n) ? etapesOuvertes.delete(n) : etapesOuvertes.add(n);
@@ -541,6 +544,16 @@ function voirSons() {
 // ---------- Dictionnaire ----------
 const normalise = s => Langue.versHiragana(String(s)).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 let dicoFiltre = 'tout', dicoTexte = '', dicoMax = 40;
+const SONS_EMPRUNTES = ['ファ', 'フィ', 'フェ', 'フォ', 'ティ', 'ディ', 'チェ', 'シェ', 'ジェ', 'ウィ', 'ウェ'];
+const DICO_KANA = [
+  ['Hiragana de base', HIRA_BASE.flatMap(([s]) => [...s])],
+  ['Hiragana avec ゛ et ゜', HIRA_DAK.flatMap(([s]) => [...s])],
+  ['Hiragana combinés', YOON],
+  ['Katakana de base', KATA_BASE.flatMap(([s]) => [...s])],
+  ['Katakana avec ゛ et ゜', KATA_DAK.flatMap(([s]) => [...s])],
+  ['Katakana combinés', YOON_KATA],
+  ['Katakana pour les sons étrangers', SONS_EMPRUNTES],
+].flatMap(([cat, liste]) => liste.map(jp => ({ jp, cat, memo: MEMOS[jp], ...Langue.lire(jp) })));
 const KARATE_MOTS = KARATE.flatMap(g => g.mots.map(m => {
   const [raw, fr] = m.split('|');
   return { raw, fr, cat: g.cat, note: g.note, kana: Langue.enKana(raw), ecrit: Langue.enEcrit(raw), ...Langue.lire(raw) };
@@ -549,7 +562,7 @@ function voirDico() {
   vue.innerHTML = `<div class="carte">
     <input id="dico-q" class="recherche" type="search" placeholder="Français, romaji, kana ou kanji" value="${esc(dicoTexte)}" aria-label="Rechercher">
     <div class="options">
-      ${[['tout', 'Tout'], ['mots', 'Mots'], ['kanji', 'Kanji'], ['gram', 'Grammaire'], ['karate', 'Karaté']].map(([v, t]) => `<button class="puce" data-f="${v}" aria-pressed="${dicoFiltre === v}">${t}</button>`).join('')}
+      ${[['tout', 'Tout'], ['mots', 'Mots'], ['kanji', 'Kanji'], ['gram', 'Grammaire'], ['karate', 'Karaté'], ['kana', 'Kana']].map(([v, t]) => `<button class="puce" data-f="${v}" aria-pressed="${dicoFiltre === v}">${t}</button>`).join('')}
     </div>
   </div>
   <div id="dico-res" class="liste"></div>`;
@@ -570,6 +583,8 @@ function rendDico() {
   const conn = new Set(Cours.kanjis.map(k => k.jp));
   const trouve = (...champs) => !q || champs.some(c => { const n = compacte(c); return n.includes(q) || n.includes(qSansOu); });
   const res = [];
+  // Pour un kana, on cherche le signe ou le son exact : « ka » ne doit pas sortir tout ce qui contient un « a ».
+  if (dicoFiltre === 'kana' || (dicoFiltre === 'tout' && q)) DICO_KANA.forEach(k => { if (!q || [k.jp, k.romaji, k.guide].some(c => compacte(c) === q)) res.push({ t: 'kana', el: k }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'mots') {
     const vus = new Set();
     Cours.mots.forEach(m => {
@@ -581,21 +596,31 @@ function rendDico() {
   if (dicoFiltre === 'tout' || dicoFiltre === 'gram') Cours.grammaires.forEach(g => { if (trouve(g.n, g.p, g.e)) res.push({ t: 'gram', el: g }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'karate') KARATE_MOTS.forEach(k => { if (trouve(k.fr, k.kana, k.ecrit, k.romaji, k.cat)) res.push({ t: 'karate', el: k }); });
   if (!res.length) { zone.innerHTML = `<p class="petit" style="text-align:center;padding:20px">Aucun résultat.</p>`; return; }
-  const groupe = dicoFiltre === 'karate';
+  const groupe = dicoFiltre === 'karate' || dicoFiltre === 'kana';
+  const kanaEcrit = el => contientKanji(el.raw) ? `<span class="ecrit">${esc(el.kana)}</span>` : '';
   const max = groupe ? res.length : dicoMax;
   let catCourante = '';
   const intro = groupe && !q ? `<p class="petit" style="padding:0 2px">Le vocabulaire du dōjō, avec sa lecture et sa prononciation. Certains termes et noms de katas varient d'une école à l'autre : suis ce qu'on enseigne dans la tienne.</p>` : '';
   zone.innerHTML = intro + res.slice(0, max).map(({ t, el }) => {
+    if (t === 'kana') {
+      const tete = groupe && el.cat !== catCourante ? `<h3 class="titre-sec">${esc(el.cat)}</h3>` : '';
+      catCourante = el.cat;
+      return `${tete}<div class="ligne kana-ligne">
+      <div class="gros">${esc(el.jp)}</div>
+      <div class="contenu"><div class="sens">${esc(el.romaji)}${esc(guideSiUtile(el.romaji, el.guide))}</div>${el.memo ? `<span class="petit">${esc(el.memo)}</span>` : ''}</div>
+      ${groupe ? '' : '<span class="jour-lien">Kana</span>'}${btnAudio(el.jp)}
+    </div>`;
+    }
     if (t === 'karate') {
       const tete = groupe && el.cat !== catCourante ? `<h3 class="titre-sec">${esc(el.cat)}</h3>${el.note ? `<p class="petit" style="padding:0 2px">${jpHtml(el.note, null)}</p>` : ''}` : '';
       catCourante = el.cat;
       return `${tete}<div class="ligne">
-      <div class="contenu"><div class="mot" style="font-size:18px">${jpHtml(el.raw, null)}</div><div class="sens">${esc(el.fr)}</div>${romajiHtml(el.raw)}</div>
+      <div class="contenu"><div class="mot" style="font-size:18px">${jpHtml(el.raw, null)}</div>${kanaEcrit(el)}<div class="sens">${esc(el.fr)}</div>${romajiHtml(el.raw)}</div>
       ${groupe ? '' : '<span class="jour-lien">Karaté</span>'}${btnAudio(audioDe(el.raw))}
     </div>`;
     }
     if (t === 'mot') return `<div class="ligne">
-      <div class="contenu"><div class="mot" style="font-size:18px">${jpHtml(el.raw, conn)}</div><div class="sens">${esc(el.fr)}</div>${romajiHtml(el.raw)}</div>
+      <div class="contenu"><div class="mot" style="font-size:18px">${jpHtml(el.raw, conn)}</div>${kanaEcrit(el)}<div class="sens">${esc(el.fr)}</div>${romajiHtml(el.raw)}</div>
       <span class="jour-lien">Jour ${el.jour}</span>${btnAudio(audioDe(el.raw))}
     </div>`;
     if (t === 'kanji') return `<div class="ligne kanji-carte" data-kanji="${esc(el.jp)}" role="button" tabindex="0">
@@ -607,6 +632,38 @@ function rendDico() {
   }).join('') + (res.length > max ? `<button class="btn second" id="dico-plus">Afficher plus (${res.length - max} restants)</button>` : '');
   const plus = document.getElementById('dico-plus');
   if (plus) plus.addEventListener('click', () => { dicoMax += 40; rendDico(); });
+}
+
+// ---------- Installation et mode hors ligne ----------
+let invitation = null;
+const estInstallee = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const estIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent);
+function boutonInstaller() {
+  if (estInstallee() || !('serviceWorker' in navigator) || !(invitation || estIOS())) return '';
+  return '<button class="btn second" id="installer" style="margin-top:12px">Installer l\'app</button>';
+}
+async function installer() {
+  if (invitation) {
+    invitation.prompt();
+    await invitation.userChoice;
+    invitation = null;
+    voirParcours();
+  } else {
+    toast("Dans Safari : touche Partager, puis « Sur l'écran d'accueil ».");
+  }
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  invitation = e;
+  if (onglet === 'parcours' && document.querySelector('.prog-tete')) voirParcours();
+});
+window.addEventListener('appinstalled', () => { invitation = null; });
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* l'app fonctionne quand même en ligne */ });
+    // Demande au navigateur de ne pas effacer la progression.
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  });
 }
 
 // ---------- Démarrage ----------
