@@ -726,7 +726,7 @@ vue.addEventListener('click', e => {
 function voirSons() {
   vue.innerHTML = `<div class="carte">
     <div class="prog-tete"><h2>Bien prononcer</h2></div>
-    <p class="petit">Le guide écrit pour une bouche québécoise. Le guide de son « ko-n-ni-tchi-wa » t'accompagne dans toute l'app : chaque tiret marque un temps. Touche un mot pour l'écouter.</p>
+    <p class="petit">Le guide écrit pour une bouche québécoise. Le guide de son « ko-n-ni-tchi-wa » t'accompagne dans toute l'app : chaque tiret marque un temps. C'est un repère en lettres françaises, pas le son exact : l'audio reste la référence. Touche un mot pour l'écouter.</p>
   </div>
   ${GUIDE_SONS.map((r, i) => `<div class="carte regle">
     <h3>${i + 1}. ${esc(r.t)}</h3>

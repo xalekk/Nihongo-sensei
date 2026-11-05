@@ -87,7 +87,7 @@ ETAPES.push({ titre: "Les adjectifs", but: "Décrire les gens, les choses et le 
   tip:"山 et 川 sont dessinés ! Trois sommets, et trois filets d'eau. 富士山 se dit fou-ji-sa-n : avec san, pas « fuji-yama ».",
   w:["山[やま]|montagne (en kanji)","川[かわ]|rivière (en kanji)","空[そら]|ciel (en kanji)","空港[くうこう]|aéroport","富士山[ふじさん]|mont Fuji"] },
 { t:"Dehors", d:"Le vocabulaire de la nature.",
-  tip:"海 : ou-mi, deux temps. Le う léger, lèvres détendues, sans « ou » arrondi français.",
+  tip:"海 : ou-mi, deux temps. Le う est léger, les lèvres à plat : ni « ou » ni « u ».",
   w:["海[うみ]|mer (en kanji)","森[もり]|forêt","島[しま]|île","湖[みずうみ]|lac","犬[いぬ]|chien (en kanji)","猫[ねこ]|chat (en kanji)","鳥[とり]|oiseau","木[き]|arbre (en kanji)","風[かぜ]|vent (en kanji)"],
   ex:["海[うみ] は きれい です ね。|La mer est belle, hein ?"] },
 { t:"Le temps qu'il fait", d:"En parler comme les Japonais.",

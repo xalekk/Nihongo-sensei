@@ -72,7 +72,7 @@ ETAPES.push({ titre: "Objectif N5", but: "Consolider le tout et t'entraîner dan
   note:"Un dernier bilan des pièges pour nous : 1. Ne nasalise pas ん. 2. Le う n'est pas arrondi. 3. Les longues restent plates. 4. Pause sur っ. 5. Pas d'accent en fin de mot. 6. R d'un seul coup. 7. ち et ティ : pas de « tsi ».",
   tip:"Enregistre-toi en lisant les exemples, puis compare à l'audio. Tu seras surpris de tes progrès depuis le jour 1 !",
   ex:["先生[せんせい]、こんにちは。|Bonjour, professeur.","学校[がっこう] で 勉強[べんきょう] します。|J'étudie à l'école.","東京[とうきょう] は 大[おお]きい です。|Tokyo est grande.","ちょっと 待[ま]って ください。|Attendez un instant, s'il vous plaît."],
-  q:["Le ん de せんせい, c'est :|Une consonne d'un temps entier|Une voyelle nasale comme « en »;Un son muet;Un son long","Le う de すし se prononce :|« ou », les lèvres détendues|Comme le « u » de « tu »;Il est muet;Comme le « é »","Le R japonais est :|Un seul coup de langue|Un R de gorge;Un son muet;Un L très fort"] },
+  q:["Le ん de せんせい, c'est :|Une consonne d'un temps entier|Une voyelle nasale comme « en »;Un son muet;Un son long","Le う de すし se prononce :|Ni « u » ni « ou » : les lèvres restent à plat|Comme le « u » de « tu »;Exactement comme notre « ou »;Il est muet","Le R japonais est :|Un seul coup de langue|Un R de gorge;Un son muet;Un L très fort"] },
 { t:"Révision : les formes polies", d:"Tout le style です/ます.",
   note:"Un grand tableau de bord : présent 食べます, négatif 食べません, passé 食べました, passé négatif 食べませんでした, invitation 食べませんか, proposition 食べましょう, désir 食べたいです.",
   tip:"Récite-le avec plusieurs verbes : 行く, 飲む, 見る, する. Ça devient comme un kata : l'enchaînement s'installe dans le corps.",

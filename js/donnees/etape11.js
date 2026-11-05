@@ -129,7 +129,7 @@ ETAPES.push({ titre: "La forme た et le style simple", but: "Raconter tes expé
   w:["生[う]まれます|naître"] },
 { t:"Lecture : une lettre au professeur", d:"Poli du début à la fin.",
   note:"Un texte poli complet, avec plusieurs formes étudiées. Lis tranquillement, une phrase à la fois.",
-  tip:"先生、お元気ですか : un bon début de lettre ! Fais attention au « ou » détendu de お元気ですか : o-gué-n-ki-dess-ka.",
+  tip:"先生、お元気ですか : un bon début de lettre ! Écoute bien la mélodie de お元気ですか : o-gué-n-ki-dess-ka.",
   ex:["田中[たなか]先生[せんせい]、お元気[げんき] です か。|Professeur Tanaka, comment allez-vous ?","私[わたし] は 毎日[まいにち] 日本語[にほんご] を 勉強[べんきょう] して います。|J'étudie le japonais tous les jours.","漢字[かんじ] は 難[むずか]しい と 思[おも]います が、面白[おもしろ]い です。|Je trouve les kanji difficiles, mais intéressants.","日本[にほん] へ 行[い]った こと が ありません。|Je ne suis jamais allé au Japon.","来年[らいねん] 行[い]きたい です。|L'année prochaine, je veux y aller."],
   q:["Comment trouve-t-il les kanji ?|Difficiles mais intéressants|Faciles et amusants;Ennuyants;Sans intérêt","Est-il déjà allé au Japon ?|Non, jamais|Oui, une fois;Oui, souvent;Le texte ne le dit pas"] },
 { t:"Le coin des particules", d:"Toutes réunies sur une page.",
