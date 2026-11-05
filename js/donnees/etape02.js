@@ -65,7 +65,7 @@ ETAPES.push({ titre: "Les katakana et les grands nombres", but: "Lire les kataka
 { t:"Les centaines et les milliers", d:"Avec quelques sons qui changent.",
   note:"Attention : 300 = さんびゃく, 600 = ろっぴゃく, 800 = はっぴゃく. Et 3000 = さんぜん, 8000 = はっせん. Le Japon compte aussi par tranches de 10 000 : いちまん. 100 000 = じゅうまん (10 × 10 000).",
   tip:"Dans ろっぴゃく et はっぴゃく, garde bien la petite pause : ro-(pause)-pya-kou.",
-  w:["にひゃく|deux cents","さんびゃく|trois cents","ろっぴゃく|six cents","はっぴゃく|huit cents","せん|mille","さんぜん|trois mille","はっせん|huit mille","いちまん|dix mille"] },
+  w:["にひゃく|deux cents","ごひゃく|cinq cents","さんびゃく|trois cents","ろっぴゃく|six cents","はっぴゃく|huit cents","せん|mille","さんぜん|trois mille","はっせん|huit mille","いちまん|dix mille"] },
 { t:"Les objets du bureau", d:"Des mots mélangeant hiragana et katakana.",
   tip:"けしゴム se dit ké-chi-go-mou. Le mot change d'écriture au milieu, mais tu les connais toutes les deux !",
   w:["けしゴム|efface","つくえ|bureau, table de travail","まど|fenêtre","とけい|montre, horloge","でんき|électricité, lumière","えいが|film"] },

@@ -128,7 +128,7 @@ ETAPES.push({ titre: "Premières phrases", but: "Te présenter, poser des questi
   tip:"よろしく : yo-ro-chi-kou. Le « ku » final s'efface beaucoup : on l'entend presque comme yo-ro-chik.",
   ex:["はじめまして。 マリ です。|Enchantée. Je m'appelle Mari.","カナダ から 来[き]ました。|Je viens du Canada.","どうぞ よろしく おねがいします。|Au plaisir de vous connaître."],
   q:["La première chose qu'on dit en se présentant ?|はじめまして。|さようなら。;いただきます。;おやすみ なさい。","Comment finir une présentation ?|どうぞ よろしく おねがいします。|すみません。;どう いたしまして。;こんばんは。"],
-  w:["よろしく|au plaisir, s'il vous plaît","どう いたしまして|de rien","から|de (provenance)"] },
+  w:["来[き]ました|je suis venu","よろしく|au plaisir, s'il vous plaît","どう いたしまして|de rien","から|de (provenance)"] },
 { t:"Vrai ou faux ?", d:"そうです, そうですか et ちがいます.",
   g:{ n:"そうです・そうですか", p:"そうです = c'est ça · そうですか = ah bon ?",
     e:"そうです confirme. そうですか (avec un ton qui descend) veut dire « ah, je vois », sans être une vraie question. Pour contredire poliment, on préfère ちがいます, plutôt qu'un simple いいえ." },

@@ -1,7 +1,7 @@
 // sw.js — garde l'app disponible hors ligne.
 // En ligne, on prend toujours la dernière version publiée. Hors ligne, ou si le réseau traîne, on prend la copie gardée.
 // Si un nouveau fichier est ajouté à l'app, ajoute-le à cette liste et change le numéro de CACHE.
-const CACHE = 'nihongo-sensei-v1';
+const CACHE = 'nihongo-sensei-v2';
 const FICHIERS = [
   './',
   'index.html',
@@ -17,6 +17,7 @@ const FICHIERS = [
   'js/donnees/kana.js',
   'js/donnees/prononciation.js',
   'js/donnees/karate.js',
+  'js/donnees/kanji-trucs.js',
   'js/donnees/etape01.js',
   'js/donnees/etape02.js',
   'js/donnees/etape03.js',

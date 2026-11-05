@@ -11,7 +11,7 @@ ETAPES.push({ titre: "Il y a, où, combien", but: "Dire où sont les choses, com
   g:{ n:"〜が います", p:"猫が います = Il y a un chat",
     e:"います pour tout ce qui est vivant et qui bouge : personnes et animaux. C'est aussi « avoir » : 兄が います (j'ai un grand frère). Les plantes, elles, prennent あります !" },
   tip:"います : i-mass. Deux temps + mass. Sans nasale française, ni R.",
-  ex:["猫[ねこ] が います。|Il y a un chat.","兄[あに] が います。|J'ai un grand frère.","子[こ]ども が 二人[ふたり] います。|J'ai deux enfants."],
+  ex:["猫[ねこ] が います。|Il y a un chat.","兄[あに] が います。|J'ai un grand frère.","子[こ]ども が います。|J'ai des enfants."],
   q:["(Pour un chat) 猫[ねこ] が ___。|います|あります;です;します|Il y a un chat.","(Pour un livre) 本[ほん] が ___。|あります|います;です;します|Il y a un livre.","(Pour un arbre) 木[き] が ___。|あります|います;です;します|Il y a un arbre."],
   w:["います|il y a (êtres vivants)","いません|il n'y a pas (êtres vivants)"] },
 { t:"Où ? 〜に あります", d:"Situer quelque chose.",

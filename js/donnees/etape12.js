@@ -50,7 +50,7 @@ ETAPES.push({ titre: "Les dernières pièces du N5", but: "Compléter la grammai
   tip:"こちら : ko-tchi-ra. Formule très polie pour « par ici ». Tu l'entendras en entrant dans un magasin.",
   ex:["こんな 本[ほん] が 好[す]き です。|J'aime les livres comme celui-ci.","こう 書[か]いて ください。|Écrivez comme ça, s'il vous plaît.","こちら へ どうぞ。|Par ici, s'il vous plaît."],
   q:["___ 本[ほん] が 好[す]き です。 (comme celui-ci)|こんな|これ;ここ;こう|J'aime les livres comme celui-ci.","___ 書[か]いて ください。 (de cette façon)|こう|こんな;これ;ここ|Écrivez comme ça, s'il vous plaît."],
-  w:["こんな|comme ceci","そんな|comme cela","あんな|comme là-bas","こちら|par ici (poli)","そちら|par là (poli)","あちら|là-bas (poli)"] },
+  w:["こう|comme ceci, de cette façon","こんな|comme ceci, de ce genre","そんな|comme cela","あんな|comme là-bas","こちら|par ici (poli)","そちら|par là (poli)","あちら|là-bas (poli)"] },
 { t:"Pas encore : まだ〜ていません", d:"Ce qui n'est pas fait.",
   g:{ n:"まだ〜ていません", p:"まだ 食べていません = Je n'ai pas encore mangé",
     e:"Pour dire « pas encore », on utilise 〜ていません et non ませんでした. La phrase 食べませんでした dit juste que tu n'as pas mangé (fini, passé). まだ 食べていません dit que ça peut encore arriver." },

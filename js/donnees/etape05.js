@@ -95,7 +95,7 @@ ETAPES.push({ titre: "Les verbes en ます", but: "Raconter ta journée, au pré
   tip:"します = « chi-mass » : le し n'est pas « si ». Et しました = « chi-mach-ta ».",
   ex:["毎日[まいにち] 勉強[べんきょう] します。|J'étudie tous les jours.","スポーツ を します。|Je fais du sport."],
   q:["スポーツ を ___。|します|いきます;のみます;たべます|Je fais du sport."],
-  w:["します|faire","料理[りょうり]します|cuisiner","掃除[そうじ]します|faire le ménage","洗濯[せんたく]します|faire la lessive","買[か]い物[もの]します|magasiner","運動[うんどう]します|faire de l'exercice","電話[でんわ]します|téléphoner"] },
+  w:["します|faire","スポーツ|sport","料理[りょうり]します|cuisiner","掃除[そうじ]します|faire le ménage","洗濯[せんたく]します|faire la lessive","買[か]い物[もの]します|magasiner","運動[うんどう]します|faire de l'exercice","電話[でんわ]します|téléphoner"] },
 { t:"Rien, nulle part : 何も", d:"La négation totale.",
   g:{ n:"何も・どこも・だれも + négatif", p:"何も 食べません = Je ne mange rien",
     e:"Mot interrogatif + も + verbe négatif = négation totale. 何も = rien, どこも = nulle part, だれも = personne. Note : pour les verbes de mouvement : どこへも ou どこにも." },

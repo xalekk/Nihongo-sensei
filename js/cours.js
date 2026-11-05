@@ -3,7 +3,7 @@
 // Rythme : 13 étapes de 28 jours (6 leçons + 1 révision, 4 fois), puis l'examen final au jour 365.
 
 const Cours = (() => {
-  const nettoieSens = s => s.replace(/,?\s*\(?en (kanji|hiragana et kanji)\)?/g, '').trim();
+  const nettoieSens = s => s.replace(/,?\s*\(?(en|avec) (kanji|hiragana et kanji)\)?/g, '').trim();
   const melange = t => { const a = [...t]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const sansTilde = s => s.replace(/〜/g, '');
 
@@ -146,6 +146,19 @@ const Cours = (() => {
       choix: melange([{ raw: q.rep, ok: true, jp: !/[a-zA-ZÀ-ÿ]/.test(q.rep) }, ...q.dist.map(x => ({ raw: x, jp: !/[a-zA-ZÀ-ÿ]/.test(x) }))]), id: 'q:' + q.jour + ':' + i, retroPhrase: q };
   }
 
+  // Réponses à taper : se souvenir sans voir les choix.
+  const saisieOk = m => !/[\s〜]/.test(m.kana) && m.kana.length >= 2 && m.kana.length <= 10;
+  function qSaisieMot(m) {
+    const attendus = [...new Set([m.kana, ...mots.filter(x => x.fr === m.fr && saisieOk(x)).map(x => x.kana)])];
+    return { sorte: 'saisie', consigne: 'Comment dit-on en japonais ?', enonceFr: sansTilde(m.fr), attendus, id: m.id + ':tape', retro: m };
+  }
+  function qSaisieKana(k) {
+    return { sorte: 'saisie', consigne: 'Tape le son de ce signe', enonce: k.jp, grand: true, attendus: [k.jp], id: k.id + ':tape', retro: k };
+  }
+  function qSaisieLecture(m) {
+    return { sorte: 'saisie', consigne: 'Tape la lecture de ce mot', enonce: m.ecrit, attendus: [m.kana], id: m.id + ':lu-tape', retro: m };
+  }
+
   // Ordre des mots : seulement si la phrase n'a qu'un ordre naturel.
   const PARTICULES = new Set(['は', 'が', 'を', 'に', 'で', 'へ', 'と', 'も', 'から', 'まで', 'の', 'や', 'か']);
   function ordrePossible(raw) {
@@ -159,10 +172,14 @@ const Cours = (() => {
     return { sorte: 'ordre', consigne: 'Remets la phrase dans l\'ordre', enonceFr: ex.fr, toks, id: 'o:' + ex.raw, retroEx: ex };
   }
 
-  function questionPour(el, nJour, voix, connus) {
-    if (el.type === 'kana') return qKana(el, nJour, voix);
+  function questionPour(el, nJour, voix, connus, tauxSaisie = 0.25) {
+    const tape = Math.random() < tauxSaisie;
+    if (el.type === 'kana') return tape ? qSaisieKana(el) : qKana(el, nJour, voix);
     if (el.type === 'kanji') return qKanji(el, nJour);
-    if ([...el.ecrit].some(c => Langue.estKanji(c)) && [...el.ecrit].filter(c => Langue.estKanji(c)).every(c => connus.has(c)) && Math.random() < 0.5) return qLecture(el, nJour);
+    const kj = [...el.ecrit].filter(c => Langue.estKanji(c));
+    if (kj.length && kj.every(c => connus.has(c)) && Math.random() < 0.5) return tape && saisieOk(el) ? qSaisieLecture(el) : qLecture(el, nJour);
+    // Taper un mot demande de connaître les kana : à partir de l'étape 2.
+    if (tape && nJour > 28 && saisieOk(el)) return qSaisieMot(el);
     return qMot(el, nJour, voix);
   }
 
@@ -198,6 +215,29 @@ const Cours = (() => {
     return melange(liste);
   }
 
+  // Répétition espacée : tout ce qu'une leçon ajoute aux révisions.
+  const QUESTIONS_SRS = new Map();
+  lecons.forEach(l => l.questions.forEach((q, i) => { if (q.enonce.includes('___')) QUESTIONS_SRS.set('q:' + q.jour + ':' + i, { q, i }); }));
+  function idsDeLecon(l) {
+    const ids = [...l.kanas, ...l.kanjis, ...l.mots].map(e => e.id);
+    l.questions.forEach((q, i) => { const id = 'q:' + q.jour + ':' + i; if (QUESTIONS_SRS.has(id)) ids.push(id); });
+    return ids;
+  }
+  function quizSrs(entrees, nJour, voix) {
+    const connus = kanjiConnus(nJour);
+    return melange(entrees.flatMap(([id, niveau]) => {
+      const g = QUESTIONS_SRS.get(id);
+      const el = elements.get(id);
+      if (!g && !el) return [];
+      const q = g ? qGrammaire(g.q, g.i) : questionPour(el, Math.max(nJour, el.jour || 0), voix, connus, niveau >= 2 ? 0.5 : 0.15);
+      q.srsId = id;
+      return [q];
+    }));
+  }
+  const srsExiste = id => QUESTIONS_SRS.has(id) || elements.has(id);
+  const enregistreMot = el => { elements.set(el.id, el); return el; };
+  const retireMot = id => elements.delete(id);
+
   // Séances libres du Dōjō
   function quizDojo(sorte, progres, voix) {
     const nJ = progres.jourDebloque;
@@ -207,8 +247,9 @@ const Cours = (() => {
     if (sorte === 'kanji') pool = kanjis.filter(k => k.jour <= nJ);
     if (sorte === 'mots') pool = mots.filter(m => m.jour <= nJ);
     if (sorte === 'erreurs') pool = Object.keys(progres.erreurs).map(id => elements.get(id)).filter(Boolean);
+    if (sorte === 'mes') pool = (progres.mesMots || []).map(m => elements.get(m.id)).filter(Boolean);
     const nj = (sorte === 'hiragana' || sorte === 'katakana') ? 365 : nJ;
-    const taille = sorte === 'erreurs' ? 12 : 20;
+    const taille = sorte === 'erreurs' || sorte === 'mes' ? 12 : 20;
     return melange(pool).slice(0, taille).map(e => questionPour(e, nj, voix, connus));
   }
 
@@ -217,8 +258,9 @@ const Cours = (() => {
     if (sorte === 'kanji') return kanjis.filter(k => k.jour <= nJ).length;
     if (sorte === 'mots') return mots.filter(m => m.jour <= nJ).length;
     if (sorte === 'erreurs') return Object.keys(progres.erreurs).filter(id => elements.has(id)).length;
+    if (sorte === 'mes') return (progres.mesMots || []).length;
     return [...elements.values()].filter(e => e.type === 'kana' && e.script === sorte).length;
   }
 
-  return { jours, lecons, mots, kanjis, grammaires, elements, kanjiConnus, quizDuJour, quizDojo, compteDojo, melange, sansTilde, ordrePossible };
+  return { jours, lecons, mots, kanjis, grammaires, elements, kanjiConnus, quizDuJour, quizDojo, compteDojo, quizSrs, idsDeLecon, srsExiste, enregistreMot, retireMot, melange, sansTilde, ordrePossible };
 })();

@@ -138,7 +138,7 @@ input { font: inherit; color: inherit; }
 .romaji { font-size: 12.5px; color: var(--doux); display: block; line-height: 1.4; overflow-wrap: anywhere; }
 .romaji em { font-style: normal; color: var(--rouge-fonce); }
 .ecrit { font-size: 12.5px; color: var(--tres-doux); font-family: var(--jp); }
-.sans-romaji .romaji { display: none; }
+.romaji-floue :not(.retro) > .romaji:not(.vu) { filter: blur(5px); cursor: pointer; user-select: none; }
 .sans-furigana rt { visibility: hidden; }
 ruby { ruby-position: over; }
 rt { font-size: .55em; font-weight: 500; color: var(--doux); }
@@ -151,6 +151,10 @@ rt { font-size: .55em; font-weight: 500; color: var(--doux); }
 .kana .memo { font-size: 12px; color: var(--doux); line-height: 1.35; }
 .kanji-carte { cursor: pointer; }
 .kanji-carte .gros, .kana-ligne .gros { font-family: var(--jp); font-size: 36px; font-weight: 700; line-height: 1.1; flex: none; width: 52px; text-align: center; }
+
+/* Révisions et test */
+.etape-saut { padding: 0 16px 14px; display: grid; gap: 6px; }
+.memo-kanji { font-size: 13px; color: var(--doux); line-height: 1.35; margin-top: 3px; }
 
 /* Quiz */
 .quiz-haut { display: flex; align-items: center; gap: 12px; }
@@ -180,6 +184,10 @@ rt { font-size: .55em; font-weight: 500; color: var(--doux); }
 .ordre-mots { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .tuile { font-family: var(--jp); font-weight: 700; font-size: 17px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); box-shadow: var(--ombre); }
 .tuile:disabled { opacity: .3; cursor: default; }
+
+.saisie { display: grid; gap: 8px; }
+.saisie .recherche { text-align: center; font-size: 18px; }
+.apercu { min-height: 28px; font-size: 20px; font-weight: 700; color: var(--doux); }
 
 /* Résultats */
 .resultat { text-align: center; display: grid; gap: 10px; }
@@ -221,6 +229,13 @@ rt { font-size: .55em; font-weight: 500; color: var(--doux); }
 .kc small { font-size: 11.5px; line-height: 1.2; color: var(--doux); }
 .kc small.gd { font-size: 10.5px; color: var(--rouge-fonce); }
 .kc.ancien { opacity: .55; }
+
+/* Mes mots */
+.formulaire { display: grid; gap: 6px; }
+.formulaire label { font-size: 13px; font-weight: 700; color: var(--doux); margin-top: 6px; }
+.formulaire .btn { margin-top: 8px; }
+.audio.ajout { width: 36px; height: 36px; font-weight: 800; font-size: 18px; color: var(--doux); background: var(--zone); }
+.audio.ajout:disabled { color: var(--vert); cursor: default; }
 
 /* Dictionnaire */
 .recherche { width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--ligne); background: var(--zone); font-size: 16px; }

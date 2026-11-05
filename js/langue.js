@@ -194,7 +194,35 @@ const Langue = (() => {
 
   const lireSigne = jp => groupe(jp, true);
 
-  return { segments, enKana, enEcrit, lire, lireSigne, estKanji, versHiragana };
+  // Romaji tapé au clavier → hiragana. « gakkou » donne がっこう.
+  const INVERSE = {};
+  Object.keys(SYLLABES).forEach(k => { const r = SYLLABES[k][0]; if (!INVERSE[r]) INVERSE[r] = k; });
+  Object.assign(INVERSE, { si: 'し', hu: 'ふ', zi: 'じ', wo: 'を', sya: 'しゃ', syu: 'しゅ', syo: 'しょ', tya: 'ちゃ', tyu: 'ちゅ', tyo: 'ちょ', jya: 'じゃ', jyu: 'じゅ', jyo: 'じょ' });
+  function versKana(texte) {
+    const t = texte.toLowerCase().replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ē/g, 'ee').replace(/ō/g, 'ou');
+    let out = '', i = 0;
+    while (i < t.length) {
+      const c = t[i];
+      if (c === "'" || c === '-' || c === ' ') { i++; continue; }
+      if (i + 1 < t.length && /[bcdfghjklmpqrstvwyz]/.test(c) && (t[i + 1] === c || (c === 't' && t[i + 1] === 'c'))) { out += 'っ'; i++; continue; }
+      let trouve = false;
+      for (let n = 3; n >= 1 && !trouve; n--) {
+        const m = INVERSE[t.slice(i, i + n)];
+        if (m) { out += m; i += n; trouve = true; }
+      }
+      if (!trouve) { out += c; i++; }
+    }
+    return out;
+  }
+  // Compare une réponse tapée (romaji ou kana) à la réponse attendue, longueurs comprises.
+  const canon = x => lireSigne(x.replace(/[\s'〜]/g, '')).romaji.replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ē/g, 'ee').replace(/ō/g, 'oo');
+  const reponseJuste = (tape, attendu) => {
+    const t = tape.trim();
+    if (!t) return false;
+    return canon(/[a-zA-Zāīūēō]/.test(t) ? versKana(t) : t) === canon(attendu);
+  };
+
+  return { segments, enKana, enEcrit, lire, lireSigne, versKana, reponseJuste, estKanji, versHiragana };
 })();
 
 if (typeof module !== 'undefined') module.exports = Langue;

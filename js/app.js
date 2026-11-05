@@ -13,7 +13,7 @@ const esc = s => String(s)
 const guideSiUtile = (r, g) => r === g ? '' : ` « ${g} »`;
 
 // ---------- Progression ----------
-let progres = { version: 2, jourDebloque: 1, xp: 0, faits: [], erreurs: {}, romaji: true, furigana: true };
+let progres = { version: 2, jourDebloque: 1, xp: 0, faits: [], erreurs: {}, romaji: 'auto', furigana: true, srs: {}, mesMots: [] };
 
 function charge() {
   try {
@@ -24,6 +24,54 @@ function charge() {
     // Ancienne version de 30 jours : le contenu a changé, on garde seulement les XP.
     else if (typeof s.xp === 'number') progres.xp = s.xp;
   } catch (e) { /* stockage indisponible : l'app fonctionne quand même */ }
+  if (progres.romaji === true) progres.romaji = 'auto';
+  if (progres.romaji === false) progres.romaji = 'cache';
+  (progres.mesMots || []).forEach(enregistreMonMot);
+  // Ce qui est déjà appris entre dans les révisions, étalé pour ne pas tout ramener le même jour.
+  progres.faits.forEach(n => { const j = Cours.jours[n - 1]; if (j && j.type === 'lecon') enrole(j.lecon, { etale: true }); });
+}
+
+// ---------- Répétition espacée ----------
+const INTERVALLES = [1, 3, 7, 14, 30, 60, 120];
+const aujourdhui = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000); };
+function enrole(lecon, { niveau = 0, etale = false } = {}) {
+  Cours.idsDeLecon(lecon).forEach(id => {
+    if (!progres.srs[id]) progres.srs[id] = { n: niveau, due: aujourdhui() + (etale ? 1 + Math.floor(Math.random() * 14) : 1) };
+  });
+}
+function srsDus() {
+  const t = aujourdhui();
+  return Object.keys(progres.srs).filter(id => progres.srs[id].due <= t && Cours.srsExiste(id)).sort((a, b) => progres.srs[a].due - progres.srs[b].due);
+}
+function noteSrs(id, juste, premier) {
+  const e = progres.srs[id];
+  if (!e) return;
+  if (!premier) return; // seule la première réponse de la séance compte
+  if (juste) { e.n = Math.min(e.n + 1, INTERVALLES.length - 1); e.due = aujourdhui() + INTERVALLES[e.n]; }
+  else { e.n = Math.max(0, e.n - 2); e.due = aujourdhui() + 1; }
+}
+
+// ---------- Mes mots ----------
+function elDeMonMot(m) {
+  const raw = m.raw || m.kana;
+  return { id: m.id, type: 'mot', raw, fr: m.fr, kana: m.kana, ecrit: m.ecrit, jour: 1, ...Langue.lire(raw) };
+}
+function enregistreMonMot(m) { Cours.enregistreMot(elDeMonMot(m)); }
+function ajouteMonMot(m) {
+  m.id = 'm:' + m.kana + '|' + m.fr;
+  if (progres.mesMots.some(x => x.id === m.id)) return false;
+  progres.mesMots.unshift(m);
+  enregistreMonMot(m);
+  progres.srs[m.id] = { n: 0, due: aujourdhui() + 1 };
+  sauve();
+  return true;
+}
+function retireMonMot(id) {
+  progres.mesMots = progres.mesMots.filter(x => x.id !== id);
+  delete progres.srs[id];
+  delete progres.erreurs[id];
+  Cours.retireMot(id);
+  sauve();
 }
 function sauve() {
   try { localStorage.setItem(CLE, JSON.stringify(progres)); } catch (e) { /* idem */ }
@@ -31,7 +79,6 @@ function sauve() {
 }
 function majEntete() {
   document.getElementById('entete-xp').textContent = progres.xp.toLocaleString('fr-CA') + ' XP';
-  document.body.classList.toggle('sans-romaji', !progres.romaji);
   document.body.classList.toggle('sans-furigana', !progres.furigana);
 }
 
@@ -94,12 +141,15 @@ function allerOnglet(nom) {
   onglet = nom;
   document.querySelectorAll('.onglets button').forEach(b => b.classList.toggle('actif', b.dataset.onglet === nom));
   if ('speechSynthesis' in window) speechSynthesis.cancel();
+  floute(null);
   ({ parcours: voirParcours, dojo: voirDojo, sons: voirSons, dico: voirDico })[nom]();
   window.scrollTo(0, 0);
 }
 vue.addEventListener('click', e => {
   const b = e.target.closest('[data-parle]');
-  if (b) { e.stopPropagation(); parle(b.dataset.parle); }
+  if (b) { e.stopPropagation(); parle(b.dataset.parle); return; }
+  const r = e.target.closest('.romaji');
+  if (r) r.classList.add('vu');
 });
 fenetre.addEventListener('click', e => {
   const b = e.target.closest('[data-parle]');
@@ -112,18 +162,47 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') fenetre.clas
 const etapesOuvertes = new Set();
 function etapeDe(n) { return Cours.jours[n - 1].etape; }
 
+const NOMS_ROMAJI = { auto: 'Romaji : auto', toujours: 'Romaji : toujours', cache: 'Romaji : caché' };
+const SUITE_ROMAJI = { auto: 'toujours', toujours: 'cache', cache: 'auto' };
+let etapeAffichee = null;
+// Le romaji devient flou à partir de l'étape 3 : on essaie de lire d'abord, et on touche pour vérifier.
+function floute(etape) {
+  etapeAffichee = etape;
+  const f = etape !== null && (progres.romaji === 'cache' || (progres.romaji === 'auto' && etape >= 3));
+  document.body.classList.toggle('romaji-floue', f);
+}
 function reglagesHtml() {
   return `<div class="options">
-    <button class="puce" data-regle="romaji" aria-pressed="${progres.romaji}">Romaji</button>
+    <button class="puce" data-regle="romaji" aria-pressed="${progres.romaji !== 'cache'}">${NOMS_ROMAJI[progres.romaji]}</button>
     <button class="puce" data-regle="furigana" aria-pressed="${progres.furigana}">Furigana</button>
   </div>`;
 }
 function brancheReglages() {
   vue.querySelectorAll('[data-regle]').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.regle;
+    if (k === 'romaji') {
+      progres.romaji = SUITE_ROMAJI[progres.romaji];
+      b.textContent = NOMS_ROMAJI[progres.romaji];
+      b.setAttribute('aria-pressed', progres.romaji !== 'cache');
+      floute(etapeAffichee);
+      sauve();
+      return;
+    }
     progres[k] = !progres[k]; sauve();
     b.setAttribute('aria-pressed', progres[k]);
   }));
+}
+
+function carteRevisions() {
+  const total = Object.keys(progres.srs).length;
+  if (!total) return '';
+  const dus = srsDus().length;
+  const solides = Object.values(progres.srs).filter(e => e.n >= 4).length;
+  return `<div class="carte revisions">
+    <div class="prog-tete"><h2>Révisions du jour</h2><span>${dus}</span></div>
+    <p class="petit">Chaque élément revient juste avant que tu l'oublies. ${solides} sur ${total} sont bien ancrés.</p>
+    ${dus ? `<button class="btn" id="go-revisions" style="margin-top:12px">Réviser ${Math.min(dus, 20)} éléments</button>` : '<p class="petit" style="margin-top:8px;font-weight:700">Tout est fait pour aujourd\'hui !</p>'}
+  </div>`;
 }
 
 function voirParcours() {
@@ -137,7 +216,8 @@ function voirParcours() {
     <p class="petit" style="margin-top:10px">Environ 15 minutes par jour. Une erreur au quiz ? La question revient à la fin : tu finis quand tout est bon, et le jour suivant se débloque aussitôt.</p>
     ${reglagesHtml()}
     ${boutonInstaller()}
-  </div>`;
+  </div>
+  ${carteRevisions()}`;
 
   ETAPES.forEach(et => {
     const js = Cours.jours.filter(j => j.etape === et.numero);
@@ -152,7 +232,9 @@ function voirParcours() {
         <span class="fleche">${ICONES.fleche}</span>
       </button>`;
     if (ouv) {
-      h += `<p class="etape-but">${esc(et.but)}</p><div class="jours">`;
+      h += `<p class="etape-but">${esc(et.but)}</p>`;
+      if (cour && et.numero < 13) h += `<div class="etape-saut"><button class="btn second" data-saut="${et.numero}">Je connais déjà : passer le test</button><p class="petit">Réussis-le à 90 % et tu passes directement à l'étape suivante.</p></div>`;
+      h += `<div class="jours">`;
       js.forEach(j => {
         const ok = faits.has(j.n), dispo = j.n <= progres.jourDebloque, cj = j.n === progres.jourDebloque && !ok;
         const rev = j.type !== 'lecon';
@@ -167,6 +249,9 @@ function voirParcours() {
   });
   vue.innerHTML = h;
   brancheReglages();
+  const rev = document.getElementById('go-revisions');
+  if (rev) rev.addEventListener('click', () => lanceQuiz({ srs: true }));
+  vue.querySelectorAll('[data-saut]').forEach(b => b.addEventListener('click', () => lanceQuiz({ saut: +b.dataset.saut })));
   const inst = document.getElementById('installer');
   if (inst) inst.addEventListener('click', installer);
   vue.querySelectorAll('[data-etape]').forEach(b => b.addEventListener('click', () => {
@@ -215,6 +300,7 @@ function ligneKanji(k) {
     <div class="contenu">
       <div class="sens">${esc(k.fr)}</div>
       <span class="petit jp">${esc(k.on)} · ${esc(k.kun)}</span>
+      ${TRUCS_KANJI[k.jp] ? `<div class="memo-kanji">${esc(TRUCS_KANJI[k.jp])}</div>` : ''}
     </div>
     ${btnAudio(k.jp)}
   </div>`;
@@ -227,6 +313,7 @@ function ouvreKanji(jp) {
   fenetre.innerHTML = `<div class="fen-boite">
     <div class="gros">${esc(k.jp)}</div>
     <div class="sens">${esc(k.fr)}</div>
+    ${TRUCS_KANJI[k.jp] ? `<p class="memo-kanji" style="text-align:center">${esc(TRUCS_KANJI[k.jp])}</p>` : ''}
     <div class="infos jp">
       <div><b>Lecture on :</b> ${esc(k.on)}</div>
       <div><b>Lecture kun :</b> ${esc(k.kun)}</div>
@@ -251,6 +338,7 @@ function voirJour(n) {
 }
 
 function voirLecon(j) {
+  floute(j.etape);
   const l = j.lecon, connus = Cours.kanjiConnus(j.n);
   let h = `<button class="retour" data-retour>← Parcours</button>
   <div class="carte lecon-tete">
@@ -258,6 +346,7 @@ function voirLecon(j) {
     <h2>${esc(l.t)}</h2>
     <p class="petit">${esc(l.d)}</p>
     ${reglagesHtml()}
+    ${document.body.classList.contains('romaji-floue') ? '<p class="petit" style="margin-top:8px">Essaie de lire d\'abord. Touche une lecture floue pour la voir.</p>' : ''}
   </div>`;
   if (l.note) h += `<div class="encart note"><h3>À savoir</h3>${esc(l.note)}</div>`;
   if (l.g) h += `<div class="carte gram">
@@ -279,6 +368,7 @@ function voirLecon(j) {
 }
 
 function voirRevision(j) {
+  floute(j.etape);
   const connus = Cours.kanjiConnus(j.n);
   const gram = j.source.filter(l => l.g);
   const titres = { revision: 'Révision', bilan: 'Bilan', final: 'Examen final' };
@@ -309,12 +399,28 @@ function voirRevision(j) {
 // ---------- Quiz ----------
 let quiz = null;
 
-function lanceQuiz({ jour, dojo }) {
+function lanceQuiz({ jour, dojo, srs, saut }) {
   const avecVoix = !!voixJapon;
-  const liste = dojo ? Cours.quizDojo(dojo, progres, avecVoix) : Cours.quizDuJour(jour, avecVoix);
+  const nJ = progres.jourDebloque;
+  let liste, connus;
+  const bilan = saut ? Cours.jours.find(j => j.etape === saut && j.type === 'bilan') : null;
+  if (srs) {
+    const ids = srsDus().slice(0, 20);
+    liste = Cours.quizSrs(ids.map(id => [id, progres.srs[id].n]), nJ, avecVoix);
+    connus = Cours.kanjiConnus(nJ);
+  } else if (bilan) {
+    liste = Cours.quizDuJour(bilan, avecVoix);
+    connus = Cours.kanjiConnus(bilan.n);
+  } else if (dojo) {
+    liste = Cours.quizDojo(dojo, progres, avecVoix);
+    connus = Cours.kanjiConnus(dojo === 'hiragana' || dojo === 'katakana' ? 1 : nJ);
+  } else {
+    liste = Cours.quizDuJour(jour, avecVoix);
+    connus = Cours.kanjiConnus(jour.n);
+  }
   if (!liste.length) { toast('Rien à pratiquer ici pour le moment.'); return; }
-  const connus = dojo ? Cours.kanjiConnus(dojo === 'hiragana' || dojo === 'katakana' ? 1 : progres.jourDebloque) : Cours.kanjiConnus(jour.n);
-  quiz = { jour, dojo, file: [...liste], total: liste.length, fait: 0, bonnes: 0, ratees: new Set(), connus, verrou: false };
+  const etape = jour ? jour.etape : bilan ? bilan.etape : Cours.jours[Math.min(nJ, 365) - 1].etape;
+  quiz = { jour, dojo, srs, saut, file: [...liste], total: liste.length, fait: 0, bonnes: 0, ratees: new Set(), connus, verrou: false, etape: dojo ? null : etape };
   afficheQuestion();
 }
 
@@ -326,6 +432,7 @@ function textChoix(c, connus) {
 function afficheQuestion() {
   if (!quiz.file.length) return finQuiz();
   quiz.verrou = false;
+  floute(quiz.etape);
   const q = quiz.file[0];
   const fait = quiz.fait, total = quiz.total;
   const pct = Math.round(fait / total * 100);
@@ -353,6 +460,12 @@ function afficheQuestion() {
     h += `<div class="ordre-zone" id="ordre-zone" aria-label="Ta phrase"></div>
       <div class="ordre-mots" id="ordre-mots">${Cours.melange(q.toks.map((t, i) => ({ t, i }))).map(x => `<button class="tuile" data-i="${x.i}">${jpHtml(x.t, quiz.connus)}</button>`).join('')}</div>
       <button class="btn" id="ordre-ok" disabled>Vérifier</button>`;
+  } else if (q.sorte === 'saisie') {
+    h += `<div class="saisie">
+      <input id="saisie" class="recherche" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="En romaji ou en kana" aria-label="Ta réponse">
+      <div id="apercu" class="apercu jp" aria-live="polite"></div>
+      <button class="btn" id="saisie-ok" disabled>Vérifier</button>
+    </div>`;
   } else {
     h += `<div class="choix" id="choix">${q.choix.map((c, i) => `<button class="${c.jp ? 'jp' : ''}" data-c="${i}">${textChoix(c, quiz.connus)}</button>`).join('')}</div>`;
   }
@@ -367,7 +480,27 @@ function afficheQuestion() {
     rejoue();
   }
   if (q.sorte === 'ordre') brancheOrdre(q);
+  else if (q.sorte === 'saisie') brancheSaisie(q);
   else vue.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => reponds(q, +b.dataset.c, b)));
+}
+
+function brancheSaisie(q) {
+  const champ = document.getElementById('saisie'), ok = document.getElementById('saisie-ok'), apercu = document.getElementById('apercu');
+  const verifie = () => {
+    if (quiz.verrou || !champ.value.trim()) return;
+    const juste = q.attendus.some(a => Langue.reponseJuste(champ.value, a));
+    champ.disabled = true;
+    ok.classList.add('cache');
+    finitReponse(q, juste);
+  };
+  champ.addEventListener('input', () => {
+    const t = champ.value.trim();
+    ok.disabled = !t;
+    apercu.textContent = /[a-zA-Z]/.test(t) ? Langue.versKana(t) : '';
+  });
+  champ.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); verifie(); } });
+  ok.addEventListener('click', verifie);
+  champ.focus();
 }
 
 function brancheOrdre(q) {
@@ -408,7 +541,7 @@ function retroHtml(q, juste) {
   if (q.retro) {
     const r = q.retro;
     if (r.type === 'kana') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.romaji)}${esc(guideSiUtile(r.romaji, r.guide))}</div>`;
-    else if (r.type === 'kanji') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.fr)}</div>`;
+    else if (r.type === 'kanji') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.fr)}</div>${TRUCS_KANJI[r.jp] ? `<div class="memo-kanji">${esc(TRUCS_KANJI[r.jp])}</div>` : ''}`;
     else corps = `<div class="reponse">${jpHtml(r.raw, conn)}</div><div>${esc(r.fr)}</div>${romajiHtml(r.raw)}`;
   } else if (q.retroPhrase) {
     const p = q.retroPhrase;
@@ -419,7 +552,7 @@ function retroHtml(q, juste) {
   } else if (q.retroEx) {
     corps = `<div class="reponse">${jpHtml(q.retroEx.raw, conn)}</div><div>${esc(q.retroEx.fr)}</div>${romajiHtml(q.retroEx.raw)}`;
   }
-  return `<div class="retro ${juste ? 'bon' : 'faux'}"><strong>${juste ? 'Bravo !' : 'Presque ! La question reviendra.'}</strong>${corps}</div>
+  return `<div class="retro ${juste ? 'bon' : 'faux'}"><strong>${juste ? 'Bravo !' : quiz.saut ? 'Pas tout à fait.' : 'Presque ! La question reviendra.'}</strong>${corps}</div>
     <button class="btn" id="suite" style="margin-top:10px">Continuer</button>`;
 }
 
@@ -427,7 +560,13 @@ function finitReponse(q, juste) {
   quiz.verrou = true;
   const premier = !quiz.ratees.has(q.id);
   const idEl = q.retro ? q.retro.id : null;
-  if (juste) {
+  if (quiz.srs && q.srsId) noteSrs(q.srsId, juste, premier);
+  if (quiz.saut && !juste) {
+    // Un test ne ramène pas les questions ratées.
+    quiz.ratees.add(q.id);
+    quiz.file.shift();
+    quiz.fait++;
+  } else if (juste) {
     if (premier) quiz.bonnes++;
     if (idEl && progres.erreurs[idEl]) {
       progres.erreurs[idEl]--;
@@ -449,22 +588,49 @@ function finitReponse(q, juste) {
 function quitteQuiz() {
   const q = quiz;
   quiz = null;
+  floute(null);
   if (q.dojo) voirDojo();
-  else voirJour(q.jour.n);
+  else if (q.jour) voirJour(q.jour.n);
+  else voirParcours();
 }
 
 function finQuiz() {
   const pct = Math.round(quiz.bonnes / quiz.total * 100);
-  let gain = 0, titre = 'Bien joué !', sousTitre = '', suivant = null;
-  if (quiz.dojo) {
+  const { dojo, srs, saut } = quiz;
+  let gain = 0, titre = 'Bien joué !', sousTitre = '', suivant = null, encore = null;
+  if (dojo) {
     gain = 5;
     titre = 'Séance terminée';
     sousTitre = 'Chaque tour au Dōjō aide ta mémoire.';
+  } else if (srs) {
+    gain = 10;
+    titre = 'Révisions faites';
+    const reste = srsDus().length;
+    sousTitre = reste ? `Il en reste ${reste} pour aujourd'hui.` : 'Tout est à jour pour aujourd\'hui.';
+    if (reste) encore = 'srs';
+  } else if (saut) {
+    const js = Cours.jours.filter(j => j.etape === saut);
+    if (pct >= 90) {
+      js.forEach(j => {
+        if (!progres.faits.includes(j.n)) progres.faits.push(j.n);
+        if (j.type === 'lecon') enrole(j.lecon, { niveau: 3, etale: true });
+      });
+      const prochain = js[js.length - 1].n + 1;
+      progres.jourDebloque = Math.max(progres.jourDebloque, prochain);
+      etapesOuvertes.clear();
+      titre = 'Étape validée !';
+      sousTitre = `Tu passes à l'étape ${saut + 1}. Ces éléments reviendront dans tes révisions.`;
+      suivant = prochain;
+    } else {
+      titre = 'Pas encore';
+      sousTitre = `Il faut 90 %. Continue l'étape au jour ${progres.jourDebloque} : tu iras vite sur ce que tu connais déjà.`;
+    }
   } else {
     const n = quiz.jour.n;
     const nouveau = !progres.faits.includes(n);
     gain = nouveau ? { lecon: 50, revision: 50, bilan: 100, final: 500 }[quiz.jour.type] : 10;
     if (nouveau) progres.faits.push(n);
+    if (quiz.jour.type === 'lecon') enrole(quiz.jour.lecon);
     if (progres.jourDebloque === n && n < 365) progres.jourDebloque = n + 1;
     if (n === 365) {
       titre = 'おめでとう！';
@@ -477,21 +643,21 @@ function finQuiz() {
   }
   progres.xp += gain;
   sauve();
-  const dojo = quiz.dojo;
+  floute(null);
   vue.innerHTML = `<div class="carte resultat">
     <div class="note-finale">${pct} %</div>
     <h2>${esc(titre)}</h2>
     <p class="petit">${esc(sousTitre)} Réussi du premier coup : ${quiz.bonnes} sur ${quiz.total}.</p>
-    <div class="gain">+${gain} XP</div>
+    ${gain ? `<div class="gain">+${gain} XP</div>` : ''}
   </div>
   ${suivant ? `<button class="btn" id="r-suivant">Passer au jour ${suivant}</button>` : ''}
-  ${dojo ? `<button class="btn" id="r-encore">Encore une séance</button>` : ''}
+  ${dojo || encore ? `<button class="btn" id="r-encore">${dojo ? 'Encore une séance' : 'Continuer mes révisions'}</button>` : ''}
   <button class="btn second" id="r-retour">${dojo ? 'Retour au Dōjō' : 'Retour au parcours'}</button>`;
-  const q = quiz;
   quiz = null;
   if (suivant) document.getElementById('r-suivant').addEventListener('click', () => voirJour(suivant));
-  if (dojo) document.getElementById('r-encore').addEventListener('click', () => lanceQuiz({ dojo }));
-  document.getElementById('r-retour').addEventListener('click', () => { allerOnglet(q.dojo ? 'dojo' : 'parcours'); });
+  const re = document.getElementById('r-encore');
+  if (re) re.addEventListener('click', () => lanceQuiz(dojo ? { dojo } : { srs: true }));
+  document.getElementById('r-retour').addEventListener('click', () => { allerOnglet(dojo ? 'dojo' : 'parcours'); });
   window.scrollTo(0, 0);
 }
 
@@ -508,6 +674,7 @@ function voirDojo() {
     <button class="dojo-btn" data-d="katakana"><b>Katakana</b><span class="jp">ア イ ウ エ オ</span><small>${c('katakana')} signes</small></button>
     <button class="dojo-btn" data-d="kanji" ${c('kanji') ? '' : 'disabled'}><b>Kanji</b><span class="jp">日 本 語</span><small>${c('kanji') ? `${c('kanji')} appris` : 'À venir : étape 3'}</small></button>
     <button class="dojo-btn" data-d="mots" ${c('mots') ? '' : 'disabled'}><b>Vocabulaire</b><span class="jp">ことば</span><small>${c('mots') ? `${c('mots')} mots appris` : 'Fais le jour 1 pour commencer'}</small></button>
+    <button class="dojo-btn large" data-d="mes" ${c('mes') ? '' : 'disabled'}><b>Mes mots</b><small>${c('mes') ? `${c('mes')} mot${c('mes') > 1 ? 's' : ''} dans ton carnet` : 'Ajoute tes mots dans Dictionnaire › Mes mots.'}</small></button>
     <button class="dojo-btn large" data-d="erreurs" ${err ? '' : 'disabled'}><b>Mes erreurs</b><small>${err ? `${err} élément${err > 1 ? 's' : ''} à revoir` : 'Rien pour le moment. Tes erreurs de quiz viendront ici.'}</small></button>
   </div>`;
   vue.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => lanceQuiz({ dojo: b.dataset.d })));
@@ -586,7 +753,7 @@ function voirDico() {
   vue.innerHTML = `<div class="carte">
     <input id="dico-q" class="recherche" type="search" placeholder="Français, romaji, kana ou kanji" value="${esc(dicoTexte)}" aria-label="Rechercher">
     <div class="options">
-      ${[['tout', 'Tout'], ['mots', 'Mots'], ['kanji', 'Kanji'], ['gram', 'Grammaire'], ['karate', 'Karaté'], ['kana', 'Kana']].map(([v, t]) => `<button class="puce" data-f="${v}" aria-pressed="${dicoFiltre === v}">${t}</button>`).join('')}
+      ${[['tout', 'Tout'], ['mots', 'Mots'], ['kanji', 'Kanji'], ['gram', 'Grammaire'], ['karate', 'Karaté'], ['kana', 'Kana'], ['mes', 'Mes mots']].map(([v, t]) => `<button class="puce" data-f="${v}" aria-pressed="${dicoFiltre === v}">${t}</button>`).join('')}
     </div>
   </div>
   <div id="dico-res" class="liste"></div>`;
@@ -598,6 +765,47 @@ function voirDico() {
     rendDico();
   }));
   rendDico();
+}
+const idMonMot = el => 'm:' + el.kana + '|' + el.fr;
+const btnAjout = el => {
+  const deja = progres.mesMots.some(m => m.id === idMonMot(el));
+  return `<button class="audio ajout" data-ajout="${esc(el.raw)}" ${deja ? 'disabled' : ''} aria-label="${deja ? 'Déjà dans Mes mots' : 'Ajouter à Mes mots'}">${deja ? '✓' : '+'}</button>`;
+};
+vue.addEventListener('click', e => {
+  const b = e.target.closest('[data-ajout]');
+  if (!b || b.disabled) return;
+  const el = KARATE_MOTS.find(k => k.raw === b.dataset.ajout);
+  if (el && ajouteMonMot({ raw: el.raw, kana: el.kana, ecrit: el.ecrit, fr: el.fr })) { b.disabled = true; b.textContent = '✓'; toast('Ajouté à Mes mots et à tes révisions.'); }
+});
+function rendMesMots(zone, trouve) {
+  const liste = progres.mesMots.filter(m => trouve(m.fr, m.kana, m.ecrit, Langue.lire(m.kana).romaji));
+  zone.innerHTML = `<div class="carte formulaire">
+    <h3 class="titre-sec" style="margin:0">Ajouter un mot</h3>
+    <label for="mm-jp">Le mot</label><input id="mm-jp" class="recherche" type="text" autocomplete="off" autocapitalize="off" placeholder="Kana, kanji ou romaji">
+    <label for="mm-kana">Sa lecture, s'il a des kanji</label><input id="mm-kana" class="recherche" type="text" autocomplete="off" autocapitalize="off" placeholder="En kana ou en romaji">
+    <label for="mm-fr">Le sens en français</label><input id="mm-fr" class="recherche" type="text" autocomplete="off">
+    <button class="btn" id="mm-ok">Ajouter à mes révisions</button>
+  </div>
+  ${liste.length ? liste.map(m => `<div class="ligne">
+      <div class="contenu"><div class="mot" style="font-size:18px">${m.raw ? jpHtml(m.raw, null) : esc(m.ecrit)}</div>${m.ecrit !== m.kana ? `<span class="ecrit">${esc(m.kana)}</span>` : ''}<div class="sens">${esc(m.fr)}</div>${romajiHtml(m.raw || m.kana)}</div>
+      <button class="audio ajout" data-retrait="${progres.mesMots.indexOf(m)}" aria-label="Retirer">✕</button>${btnAudio(audioDe(m.raw || m.kana))}
+    </div>`).join('') : '<p class="petit" style="text-align:center;padding:12px">Ton carnet est vide. Ajoute ici les mots que tu croises au dōjō, en voyage ou ailleurs. Dans le filtre Karaté, le bouton + fait la même chose.</p>'}`;
+  const jp = document.getElementById('mm-jp'), lect = document.getElementById('mm-kana'), fr = document.getElementById('mm-fr');
+  document.getElementById('mm-ok').addEventListener('click', () => {
+    const vers = t => /[a-zA-Z]/.test(t) ? Langue.versKana(t) : t;
+    const mot = vers(jp.value.trim());
+    const sens = fr.value.trim();
+    const aKanji = [...mot].some(c => Langue.estKanji(c));
+    const kana = aKanji ? vers(lect.value.trim()) : mot;
+    if (!mot) { toast('Écris le mot.'); jp.focus(); return; }
+    if (!kana) { toast('Ce mot a des kanji : écris aussi sa lecture.'); lect.focus(); return; }
+    if (/[a-zA-Z]/.test(kana) || [...kana].some(c => Langue.estKanji(c))) { toast("La lecture n'est pas valide : écris-la en kana ou en romaji."); lect.focus(); return; }
+    if (!sens) { toast('Écris le sens en français.'); fr.focus(); return; }
+    if (!ajouteMonMot({ kana, ecrit: mot, fr: sens })) { toast('Ce mot est déjà dans ton carnet.'); return; }
+    toast('Ajouté à tes révisions.');
+    rendDico();
+  });
+  zone.querySelectorAll('[data-retrait]').forEach(b => b.addEventListener('click', () => { retireMonMot(progres.mesMots[+b.dataset.retrait].id); rendDico(); }));
 }
 function rendDico() {
   const zone = document.getElementById('dico-res');
@@ -619,6 +827,7 @@ function rendDico() {
   if (dicoFiltre === 'tout' || dicoFiltre === 'kanji') Cours.kanjis.forEach(k => { if (trouve(k.jp, k.fr, k.on, k.kun)) res.push({ t: 'kanji', el: k }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'gram') Cours.grammaires.forEach(g => { if (trouve(g.n, g.p, g.e)) res.push({ t: 'gram', el: g }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'karate') KARATE_MOTS.forEach(k => { if (trouve(k.fr, k.kana, k.ecrit, k.romaji, k.cat)) res.push({ t: 'karate', el: k }); });
+  if (dicoFiltre === 'mes') { rendMesMots(zone, trouve); return; }
   // Sans recherche, les kana s'affichent en tableaux complets.
   if (dicoFiltre === 'kana' && !q) { zone.innerHTML = `<p class="petit" style="padding:0 2px">Touche un signe pour l'entendre. Le son en rouge est le guide de prononciation.</p>` + tableauxKana(); return; }
   if (!res.length) { zone.innerHTML = `<p class="petit" style="text-align:center;padding:20px">Aucun résultat.</p>`; return; }
@@ -642,7 +851,7 @@ function rendDico() {
       catCourante = el.cat;
       return `${tete}<div class="ligne">
       <div class="contenu"><div class="mot" style="font-size:18px">${jpHtml(el.raw, null)}</div>${kanaEcrit(el)}<div class="sens">${esc(el.fr)}</div>${romajiHtml(el.raw)}</div>
-      ${groupe ? '' : '<span class="jour-lien">Karaté</span>'}${btnAudio(audioDe(el.raw))}
+      ${groupe ? '' : '<span class="jour-lien">Karaté</span>'}${btnAjout(el)}${btnAudio(audioDe(el.raw))}
     </div>`;
     }
     if (t === 'mot') return `<div class="ligne">
