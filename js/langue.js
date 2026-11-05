@@ -37,6 +37,7 @@ const Langue = (() => {
     // Sons empruntés, écrits en katakana (convertis ici en hiragana)
     ふぁ:['fa','fa'], ふぃ:['fi','fi'], ふぇ:['fe','fé'], ふぉ:['fo','fo'],
     てぃ:['ti','ti'], でぃ:['di','di'], とぅ:['tu','tou'], どぅ:['du','dou'],
+    つぁ:['tsa','tsa'], つぃ:['tsi','tsi'], つぇ:['tse','tsé'], つぉ:['tso','tso'], いぇ:['ye','yé'],
     しぇ:['she','ché'], ちぇ:['che','tché'], じぇ:['je','djé'],
     うぃ:['wi','wi'], うぇ:['we','wé'], うぉ:['wo','wo'],
     ゔぁ:['va','va'], ゔぃ:['vi','vi'], ゔ:['vu','vou'], ゔぇ:['ve','vé'], ゔぉ:['vo','vo'],
@@ -108,13 +109,14 @@ const Langue = (() => {
   const LONG_G = { a:'â', i:'î', ou:'oû', é:'éé', o:'ô' };
 
   // Fusionne les sons longs (おう, おお, うう, ああ, ee, ー) et produit les deux écritures d'un groupe.
-  function groupe(tok) {
+  function groupe(tok, signeSeul) {
     let t = tok;
     const propre = t.replace(/[、。！？!?,.…「」『』〜]/g, '');
-    if (MOTS_WA.has(propre)) t = t.replace(/は/, 'わ');
+    if (signeSeul) { /* un kana montré seul garde son vrai son : は = ha, へ = he */ }
+    else if (MOTS_WA.has(propre)) t = t.replace(/は/, 'わ');
     else if (propre.startsWith('では') || propre.endsWith('では')) t = t.replace(/は/, "わ'");
     t = t.replace(/じゃあり/, "じゃ'あり"); // じゃ + あります : pas un son long
-    if (propre === 'へ') t = t.replace('へ', 'え');
+    if (propre === 'へ' && !signeSeul) t = t.replace('へ', 'え');
     if (propre === 'こんにちは' || propre === 'こんばんは') t = t.replace(/は/, 'わ');
     const syl = syllabes(t);
     let rom = [], gui = [];
@@ -183,14 +185,16 @@ const Langue = (() => {
 
   function lire(brut) {
     const toks = enKana(brut, true).replace(/[、。！？]/g, '$& ').trim().split(/\s+/).filter(Boolean);
-    const parts = toks.map(groupe);
+    const parts = toks.map(t => groupe(t));
     return {
       romaji: parts.map(p => p.romaji).filter(Boolean).join(' '),
       guide: parts.map(p => p.guide).filter(Boolean).join(' '),
     };
   }
 
-  return { segments, enKana, enEcrit, lire, estKanji, versHiragana };
+  const lireSigne = jp => groupe(jp, true);
+
+  return { segments, enKana, enEcrit, lire, lireSigne, estKanji, versHiragana };
 })();
 
 if (typeof module !== 'undefined') module.exports = Langue;

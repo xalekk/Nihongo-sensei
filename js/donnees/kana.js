@@ -23,12 +23,21 @@ const MEMOS = {
   ワ:"Un toit qui fait « wa »", ヲ:"Rare : un o qui saute", ン:"Un trait et un point qui monte (ne pas confondre avec ソ) : « n »",
 };
 
-const HIRA_BASE = [['あいうえお','Voyelles'],['かきくけこ','Ligne K'],['さしすせそ','Ligne S'],['たちつてと','Ligne T'],['なにぬねの','Ligne N'],['はひふへほ','Ligne H'],['まみむめも','Ligne M'],['やゆよ','Ligne Y'],['らりるれろ','Ligne R'],['わをん','W et N']];
-const HIRA_DAK = [['がぎぐげご','Ligne G'],['ざじずぜぞ','Ligne Z'],['だぢづでど','Ligne D'],['ばびぶべぼ','Ligne B'],['ぱぴぷぺぽ','Ligne P']];
-const YOON = ['きゃ','きゅ','きょ','しゃ','しゅ','しょ','ちゃ','ちゅ','ちょ','にゃ','にゅ','にょ','ひゃ','ひゅ','ひょ','みゃ','みゅ','みょ','りゃ','りゅ','りょ','ぎゃ','ぎゅ','ぎょ','じゃ','じゅ','じょ','びゃ','びゅ','びょ','ぴゃ','ぴゅ','ぴょ'];
+// Les tableaux complets. Une case vide ('') garde les colonnes alignées.
+const lignes = (etiquettes, texte) => texte.split(' ').map((l, i) => [etiquettes[i], ...[...l].map(c => c === '_' ? '' : c)]);
+const GOJUON = [
+  ...lignes(['', 'K', 'S', 'T', 'N', 'H', 'M', 'Y', 'R', 'W', ''], 'あいうえお かきくけこ さしすせそ たちつてと なにぬねの はひふへほ まみむめも や_ゆ_よ らりるれろ わゐ_ゑを ん____'),
+];
+const GOJUON_SONORES = lignes(['G', 'Z', 'D', 'B', 'P'], 'がぎぐげご ざじずぜぞ だぢづでど ばびぶべぼ ぱぴぷぺぽ');
+const YOON_LIGNES = [['K', 'きゃ', 'きゅ', 'きょ'], ['S', 'しゃ', 'しゅ', 'しょ'], ['T', 'ちゃ', 'ちゅ', 'ちょ'], ['N', 'にゃ', 'にゅ', 'にょ'], ['H', 'ひゃ', 'ひゅ', 'ひょ'], ['M', 'みゃ', 'みゅ', 'みょ'], ['R', 'りゃ', 'りゅ', 'りょ'], ['G', 'ぎゃ', 'ぎゅ', 'ぎょ'], ['J', 'じゃ', 'じゅ', 'じょ'], ['B', 'びゃ', 'びゅ', 'びょ'], ['P', 'ぴゃ', 'ぴゅ', 'ぴょ']];
+const SONS_ETRANGERS = [['F', 'ファ', 'フィ', '', 'フェ', 'フォ'], ['V', 'ヴァ', 'ヴィ', 'ヴ', 'ヴェ', 'ヴォ'], ['W', '', 'ウィ', '', 'ウェ', 'ウォ'], ['T', '', 'ティ', 'トゥ', '', ''], ['D', '', 'ディ', 'ドゥ', '', ''], ['Ts', 'ツァ', 'ツィ', '', 'ツェ', 'ツォ'], ['Sh', '', '', '', 'シェ', ''], ['Ch', '', '', '', 'チェ', ''], ['J', '', '', '', 'ジェ', ''], ['Y', '', '', '', 'イェ', '']];
 const kataDe = s => [...s].map(c => String.fromCharCode(c.charCodeAt(0) + 0x60)).join('');
-const KATA_BASE = HIRA_BASE.map(([k, n]) => [kataDe(k), n]);
-const KATA_DAK = HIRA_DAK.map(([k, n]) => [kataDe(k), n]);
-const YOON_KATA = YOON.map(kataDe);
+const enKatakana = t => t.map(([e, ...cs]) => [e, ...cs.map(c => c ? kataDe(c) : '')]);
+const KANA_SPECIAUX = {
+  ゐ: { romaji: 'i', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ゑ: { romaji: 'e', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
+  ヰ: { romaji: 'i', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ヱ: { romaji: 'e', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
+  っ: { romaji: 'pause', muet: true, memo: 'Petit っ : une pause d\'un temps avant la consonne suivante.' }, ッ: { romaji: 'pause', muet: true, memo: 'Petit ッ : une pause d\'un temps avant la consonne suivante.' },
+  ー: { romaji: 'long', muet: true, memo: 'Le trait ー allonge la voyelle d\'avant, surtout en katakana.' },
+};
 
-if (typeof module !== 'undefined') module.exports = { MEMOS, HIRA_BASE, HIRA_DAK, YOON, KATA_BASE, KATA_DAK, YOON_KATA, kataDe };
+if (typeof module !== 'undefined') module.exports = { MEMOS, GOJUON, GOJUON_SONORES, YOON_LIGNES, SONS_ETRANGERS, KANA_SPECIAUX, kataDe };

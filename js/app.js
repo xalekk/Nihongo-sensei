@@ -514,18 +514,48 @@ function voirDojo() {
 }
 
 // ---------- Sons ----------
-function tableKana(lignes, trois) {
-  return `<div class="tableau ${trois ? 'trois' : ''}">` + lignes.flatMap(([s]) => [...s]).map(k => {
-    const l = Langue.lire(k);
-    return `<button data-parle="${esc(k)}"><span class="jp">${esc(k)}</span><small>${esc(l.romaji)}</small></button>`;
-  }).join('') + '</div>';
+function infoKana(jp) {
+  return { jp, memo: MEMOS[jp], ...Langue.lireSigne(jp), ...(KANA_SPECIAUX[jp] || {}) };
 }
-function tableYoon(liste) {
-  return `<div class="tableau trois">` + liste.map(k => {
-    const l = Langue.lire(k);
-    return `<button data-parle="${esc(k)}"><span class="jp">${esc(k)}</span><small>${esc(l.romaji)}</small></button>`;
-  }).join('') + '</div>';
+function caseKana(jp) {
+  if (!jp) return '<td></td>';
+  const k = infoKana(jp);
+  const gd = k.guide && k.guide !== k.romaji ? `<small class="gd">${esc(k.guide)}</small>` : '';
+  return `<td><button class="kc ${KANA_SPECIAUX[jp] && KANA_SPECIAUX[jp].guide ? 'ancien' : ''}" data-kana="${esc(jp)}"><span class="jp">${esc(jp)}</span><small>${esc(k.romaji)}</small>${gd}</button></td>`;
 }
+function tableKana(titre, entetes, rangees) {
+  return `<div class="sous-titre">${esc(titre)}</div>
+  <div class="gojuon-zone"><table class="gojuon">
+    <thead><tr><th></th>${entetes.map(e => `<th scope="col">${esc(e)}</th>`).join('')}</tr></thead>
+    <tbody>${rangees.map(([etiq, ...cases]) => `<tr><th scope="row">${esc(etiq)}</th>${cases.map(caseKana).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+const VOYELLES = ['a', 'i', 'u', 'e', 'o'], PETITES = ['ya', 'yu', 'yo'];
+function tableauxKana() {
+  const special = (cs) => `<div class="sous-titre">Les signes spéciaux</div><div class="gojuon-zone"><table class="gojuon speciaux"><tbody><tr>${cs.map(caseKana).join('')}</tr></tbody></table></div>`;
+  return `<div class="carte kana-tableaux">
+    <h2 class="tab-titre">Hiragana</h2>
+    ${tableKana('Les signes de base', VOYELLES, GOJUON)}
+    ${tableKana('Avec ゛ et ゜', VOYELLES, GOJUON_SONORES)}
+    ${tableKana('Les combinaisons', PETITES, YOON_LIGNES)}
+    ${special(['っ'])}
+  </div>
+  <div class="carte kana-tableaux">
+    <h2 class="tab-titre">Katakana</h2>
+    ${tableKana('Les signes de base', VOYELLES, enKatakana(GOJUON))}
+    ${tableKana('Avec ゛ et ゜', VOYELLES, enKatakana(GOJUON_SONORES))}
+    ${tableKana('Les combinaisons', PETITES, enKatakana(YOON_LIGNES))}
+    ${tableKana('Les sons étrangers', VOYELLES, SONS_ETRANGERS)}
+    ${special(['ッ', 'ー'])}
+  </div>`;
+}
+vue.addEventListener('click', e => {
+  const b = e.target.closest('[data-kana]');
+  if (!b) return;
+  const k = infoKana(b.dataset.kana);
+  if (!k.muet) parle(k.jp === 'ヴ' ? 'ヴ' : k.jp);
+  toast(k.memo ? `${k.jp} ${k.romaji} : ${k.memo}` : `${k.jp} ${k.romaji}${k.guide !== k.romaji ? ` « ${k.guide} »` : ''}`);
+});
 function voirSons() {
   vue.innerHTML = `<div class="carte">
     <div class="prog-tete"><h2>Bien prononcer</h2></div>
@@ -536,24 +566,18 @@ function voirSons() {
     <p>${esc(r.e)}</p>
     <div class="exemples">${r.ex.map(x => `<button class="exemple" data-parle="${esc(x)}"><span class="jp">${esc(x)}</span><span class="gd">${esc(Langue.lire(x).guide)}</span></button>`).join('')}</div>
   </div>`).join('')}
-  <h3 class="titre-sec">Les tableaux, avec l'audio</h3>
-  <div class="carte"><h3 class="prog-tete" style="margin:0"><b>Hiragana</b></h3>${tableKana(HIRA_BASE)}<div class="sous-titre">Avec ゛ et ゜</div>${tableKana(HIRA_DAK)}<div class="sous-titre">Combinaisons</div>${tableYoon(YOON)}</div>
-  <div class="carte"><h3 class="prog-tete" style="margin:0"><b>Katakana</b></h3>${tableKana(KATA_BASE)}<div class="sous-titre">Avec ゛ et ゜</div>${tableKana(KATA_DAK)}<div class="sous-titre">Combinaisons</div>${tableYoon(YOON_KATA)}</div>`;
+  <h3 class="titre-sec">Les tableaux complets, avec l'audio</h3>
+  ${tableauxKana()}`;
 }
 
 // ---------- Dictionnaire ----------
 const normalise = s => Langue.versHiragana(String(s)).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 let dicoFiltre = 'tout', dicoTexte = '', dicoMax = 40;
-const SONS_EMPRUNTES = ['ファ', 'フィ', 'フェ', 'フォ', 'ティ', 'ディ', 'チェ', 'シェ', 'ジェ', 'ウィ', 'ウェ'];
+const signesDe = t => t.flatMap(([, ...cs]) => cs).filter(c => c && !KANA_SPECIAUX[c]);
 const DICO_KANA = [
-  ['Hiragana de base', HIRA_BASE.flatMap(([s]) => [...s])],
-  ['Hiragana avec ゛ et ゜', HIRA_DAK.flatMap(([s]) => [...s])],
-  ['Hiragana combinés', YOON],
-  ['Katakana de base', KATA_BASE.flatMap(([s]) => [...s])],
-  ['Katakana avec ゛ et ゜', KATA_DAK.flatMap(([s]) => [...s])],
-  ['Katakana combinés', YOON_KATA],
-  ['Katakana pour les sons étrangers', SONS_EMPRUNTES],
-].flatMap(([cat, liste]) => liste.map(jp => ({ jp, cat, memo: MEMOS[jp], ...Langue.lire(jp) })));
+  ['Hiragana', [...signesDe(GOJUON), ...signesDe(GOJUON_SONORES), ...signesDe(YOON_LIGNES)]],
+  ['Katakana', [...signesDe(enKatakana(GOJUON)), ...signesDe(enKatakana(GOJUON_SONORES)), ...signesDe(enKatakana(YOON_LIGNES)), ...signesDe(SONS_ETRANGERS)]],
+].flatMap(([cat, liste]) => liste.map(jp => ({ ...infoKana(jp), cat })));
 const KARATE_MOTS = KARATE.flatMap(g => g.mots.map(m => {
   const [raw, fr] = m.split('|');
   return { raw, fr, cat: g.cat, note: g.note, kana: Langue.enKana(raw), ecrit: Langue.enEcrit(raw), ...Langue.lire(raw) };
@@ -595,6 +619,8 @@ function rendDico() {
   if (dicoFiltre === 'tout' || dicoFiltre === 'kanji') Cours.kanjis.forEach(k => { if (trouve(k.jp, k.fr, k.on, k.kun)) res.push({ t: 'kanji', el: k }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'gram') Cours.grammaires.forEach(g => { if (trouve(g.n, g.p, g.e)) res.push({ t: 'gram', el: g }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'karate') KARATE_MOTS.forEach(k => { if (trouve(k.fr, k.kana, k.ecrit, k.romaji, k.cat)) res.push({ t: 'karate', el: k }); });
+  // Sans recherche, les kana s'affichent en tableaux complets.
+  if (dicoFiltre === 'kana' && !q) { zone.innerHTML = `<p class="petit" style="padding:0 2px">Touche un signe pour l'entendre. Le son en rouge est le guide de prononciation.</p>` + tableauxKana(); return; }
   if (!res.length) { zone.innerHTML = `<p class="petit" style="text-align:center;padding:20px">Aucun résultat.</p>`; return; }
   const groupe = dicoFiltre === 'karate' || dicoFiltre === 'kana';
   const kanaEcrit = el => contientKanji(el.raw) ? `<span class="ecrit">${esc(el.kana)}</span>` : '';

@@ -15,7 +15,7 @@ const Cours = (() => {
   function ajoute(el) { if (!elements.has(el.id)) elements.set(el.id, el); return elements.get(el.id); }
 
   function fabriqueKana(jp, jour) {
-    const lu = Langue.lire(jp);
+    const lu = Langue.lireSigne(jp);
     const memo = MEMOS[jp];
     const script = /[゠-ヿ]/.test(jp) ? 'katakana' : 'hiragana';
     return ajoute({ id: 'k:' + jp, type: 'kana', jp, script, romaji: lu.romaji, guide: lu.guide, memo, jour });
