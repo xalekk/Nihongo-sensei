@@ -108,7 +108,7 @@ const Cours = (() => {
       return { sorte: 'choix', consigne: 'Comment se lit ce signe ?', enonce: k.jp, grand: true, choix: melange([{ v: k.romaji, ok: true }, ...d.map(x => ({ v: x.romaji }))]), id: k.id, retro: k };
     }
     const d = distracteurs(pool, k, e => e.jp, nJour);
-    return { sorte: 'choix', consigne: 'Quel signe fait ce son ?', enonceFr: k.romaji === k.guide ? k.romaji : `${k.romaji} (« ${k.guide} »)`, choix: melange([{ v: k.jp, ok: true, jp: true }, ...d.map(x => ({ v: x.jp, jp: true }))]), id: k.id, retro: k };
+    return { sorte: 'choix', consigne: 'Quel signe fait ce son ?', enonceFr: k.romaji, choix: melange([{ v: k.jp, ok: true, jp: true }, ...d.map(x => ({ v: x.jp, jp: true }))]), id: k.id, retro: k };
   }
 
   function qMot(m, nJour, voix) {

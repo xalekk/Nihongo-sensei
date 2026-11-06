@@ -34,8 +34,8 @@ const SONS_ETRANGERS = [['F', 'ファ', 'フィ', '', 'フェ', 'フォ'], ['V',
 const kataDe = s => [...s].map(c => String.fromCharCode(c.charCodeAt(0) + 0x60)).join('');
 const enKatakana = t => t.map(([e, ...cs]) => [e, ...cs.map(c => c ? kataDe(c) : '')]);
 const KANA_SPECIAUX = {
-  ゐ: { romaji: 'i', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ゑ: { romaji: 'e', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
-  ヰ: { romaji: 'i', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ヱ: { romaji: 'e', guide: 'ancien', memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
+  ゐ: { romaji: 'i', ancien: true, memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ゑ: { romaji: 'e', ancien: true, memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
+  ヰ: { romaji: 'i', ancien: true, memo: 'Ancien signe, plus utilisé aujourd\'hui.' }, ヱ: { romaji: 'e', ancien: true, memo: 'Ancien signe, plus utilisé aujourd\'hui.' },
   っ: { romaji: 'pause', muet: true, memo: 'Petit っ : une pause d\'un temps avant la consonne suivante.' }, ッ: { romaji: 'pause', muet: true, memo: 'Petit ッ : une pause d\'un temps avant la consonne suivante.' },
   ー: { romaji: 'long', muet: true, memo: 'Le trait ー allonge la voyelle d\'avant, surtout en katakana.' },
 };

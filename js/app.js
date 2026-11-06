@@ -10,7 +10,6 @@ const ICONES = {
 const esc = s => String(s)
   .replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   .replace(/« /g, '«\u00a0').replace(/ (»|:|\?|!)/g, '\u00a0$1'); // espaces insécables à la française
-const guideSiUtile = (r, g) => r === g ? '' : ` « ${g} »`;
 
 // ---------- Progression ----------
 let progres = { version: 2, jourDebloque: 1, xp: 0, faits: [], erreurs: {}, romaji: 'auto', furigana: true, srs: {}, mesMots: [] };
@@ -130,7 +129,7 @@ function jpHtml(raw, connus, opts = {}) {
 }
 const romajiHtml = raw => {
   const l = Langue.lire(raw);
-  return `<span class="romaji">${esc(l.romaji)} · <em>« ${esc(l.guide)} »</em></span>`;
+  return `<span class="romaji">${esc(l.romaji)}</span>`;
 };
 const contientKanji = raw => [...Langue.enEcrit(raw)].some(c => Langue.estKanji(c));
 
@@ -290,7 +289,7 @@ function ligneExemple(x, connus) {
 function carteKana(k) {
   return `<div class="kana">
     <div class="signe"><span>${esc(k.jp)}</span>${btnAudio(k.jp)}</div>
-    <div class="son">${esc(k.romaji)} <span class="petit">${esc(guideSiUtile(k.romaji, k.guide))}</span></div>
+    <div class="son">${esc(k.romaji)}</div>
     ${k.memo ? `<div class="memo">${esc(k.memo)}</div>` : ''}
   </div>`;
 }
@@ -540,7 +539,7 @@ function retroHtml(q, juste) {
   let corps = '';
   if (q.retro) {
     const r = q.retro;
-    if (r.type === 'kana') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.romaji)}${esc(guideSiUtile(r.romaji, r.guide))}</div>`;
+    if (r.type === 'kana') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.romaji)}</div>`;
     else if (r.type === 'kanji') corps = `<div class="reponse">${esc(r.jp)}</div><div>${esc(r.fr)}</div>${TRUCS_KANJI[r.jp] ? `<div class="memo-kanji">${esc(TRUCS_KANJI[r.jp])}</div>` : ''}`;
     else corps = `<div class="reponse">${jpHtml(r.raw, conn)}</div><div>${esc(r.fr)}</div>${romajiHtml(r.raw)}`;
   } else if (q.retroPhrase) {
@@ -687,8 +686,8 @@ function infoKana(jp) {
 function caseKana(jp) {
   if (!jp) return '<td></td>';
   const k = infoKana(jp);
-  const gd = k.guide && k.guide !== k.romaji ? `<small class="gd">${esc(k.guide)}</small>` : '';
-  return `<td><button class="kc ${KANA_SPECIAUX[jp] && KANA_SPECIAUX[jp].guide ? 'ancien' : ''}" data-kana="${esc(jp)}"><span class="jp">${esc(jp)}</span><small>${esc(k.romaji)}</small>${gd}</button></td>`;
+  const ancien = KANA_SPECIAUX[jp] && KANA_SPECIAUX[jp].ancien;
+  return `<td><button class="kc ${ancien ? 'ancien' : ''}" data-kana="${esc(jp)}"><span class="jp">${esc(jp)}</span><small>${esc(k.romaji)}</small>${ancien ? '<small>ancien</small>' : ''}</button></td>`;
 }
 function tableKana(titre, entetes, rangees) {
   return `<div class="sous-titre">${esc(titre)}</div>
@@ -721,17 +720,17 @@ vue.addEventListener('click', e => {
   if (!b) return;
   const k = infoKana(b.dataset.kana);
   if (!k.muet) parle(k.jp === 'ヴ' ? 'ヴ' : k.jp);
-  toast(k.memo ? `${k.jp} ${k.romaji} : ${k.memo}` : `${k.jp} ${k.romaji}${k.guide !== k.romaji ? ` « ${k.guide} »` : ''}`);
+  toast(k.memo ? `${k.jp} ${k.romaji} : ${k.memo}` : `${k.jp} ${k.romaji}`);
 });
 function voirSons() {
   vue.innerHTML = `<div class="carte">
     <div class="prog-tete"><h2>Bien prononcer</h2></div>
-    <p class="petit">Le guide écrit pour une bouche québécoise. Le guide de son « ko-n-ni-tchi-wa » t'accompagne dans toute l'app : chaque tiret marque un temps. C'est un repère en lettres françaises, pas le son exact : l'audio reste la référence. Touche un mot pour l'écouter.</p>
+    <p class="petit">Les règles écrites pour une bouche québécoise. Touche un mot pour l'écouter : l'audio reste la référence.</p>
   </div>
   ${GUIDE_SONS.map((r, i) => `<div class="carte regle">
     <h3>${i + 1}. ${esc(r.t)}</h3>
     <p>${esc(r.e)}</p>
-    <div class="exemples">${r.ex.map(x => `<button class="exemple" data-parle="${esc(x)}"><span class="jp">${esc(x)}</span><span class="gd">${esc(Langue.lire(x).guide)}</span></button>`).join('')}</div>
+    <div class="exemples">${r.ex.map(x => `<button class="exemple" data-parle="${esc(x)}"><span class="jp">${esc(x)}</span><span class="rm">${esc(Langue.lire(x).romaji)}</span></button>`).join('')}</div>
   </div>`).join('')}
   <h3 class="titre-sec">Les tableaux complets, avec l'audio</h3>
   ${tableauxKana()}`;
@@ -816,7 +815,7 @@ function rendDico() {
   const trouve = (...champs) => !q || champs.some(c => { const n = compacte(c); return n.includes(q) || n.includes(qSansOu); });
   const res = [];
   // Pour un kana, on cherche le signe ou le son exact : « ka » ne doit pas sortir tout ce qui contient un « a ».
-  if (dicoFiltre === 'kana' || (dicoFiltre === 'tout' && q)) DICO_KANA.forEach(k => { if (!q || [k.jp, k.romaji, k.guide].some(c => compacte(c) === q)) res.push({ t: 'kana', el: k }); });
+  if (dicoFiltre === 'kana' || (dicoFiltre === 'tout' && q)) DICO_KANA.forEach(k => { if (!q || [k.jp, k.romaji].some(c => compacte(c) === q)) res.push({ t: 'kana', el: k }); });
   if (dicoFiltre === 'tout' || dicoFiltre === 'mots') {
     const vus = new Set();
     Cours.mots.forEach(m => {
@@ -829,7 +828,7 @@ function rendDico() {
   if (dicoFiltre === 'tout' || dicoFiltre === 'karate') KARATE_MOTS.forEach(k => { if (trouve(k.fr, k.kana, k.ecrit, k.romaji, k.cat)) res.push({ t: 'karate', el: k }); });
   if (dicoFiltre === 'mes') { rendMesMots(zone, trouve); return; }
   // Sans recherche, les kana s'affichent en tableaux complets.
-  if (dicoFiltre === 'kana' && !q) { zone.innerHTML = `<p class="petit" style="padding:0 2px">Touche un signe pour l'entendre. Le son en rouge est le guide de prononciation.</p>` + tableauxKana(); return; }
+  if (dicoFiltre === 'kana' && !q) { zone.innerHTML = `<p class="petit" style="padding:0 2px">Touche un signe pour l'entendre.</p>` + tableauxKana(); return; }
   if (!res.length) { zone.innerHTML = `<p class="petit" style="text-align:center;padding:20px">Aucun résultat.</p>`; return; }
   const groupe = dicoFiltre === 'karate' || dicoFiltre === 'kana';
   const kanaEcrit = el => contientKanji(el.raw) ? `<span class="ecrit">${esc(el.kana)}</span>` : '';
@@ -842,7 +841,7 @@ function rendDico() {
       catCourante = el.cat;
       return `${tete}<div class="ligne kana-ligne">
       <div class="gros">${esc(el.jp)}</div>
-      <div class="contenu"><div class="sens">${esc(el.romaji)}${esc(guideSiUtile(el.romaji, el.guide))}</div>${el.memo ? `<span class="petit">${esc(el.memo)}</span>` : ''}</div>
+      <div class="contenu"><div class="sens">${esc(el.romaji)}</div>${el.memo ? `<span class="petit">${esc(el.memo)}</span>` : ''}</div>
       ${groupe ? '' : '<span class="jour-lien">Kana</span>'}${btnAudio(el.jp)}
     </div>`;
     }
