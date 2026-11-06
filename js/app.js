@@ -354,7 +354,7 @@ function voirLecon(j) {
     <div class="patron">${esc(l.g.p)}</div>
     <p>${esc(l.g.e)}</p>
   </div>`;
-  if (l.tip) h += `<div class="encart truc"><h3>Truc de prononciation</h3>${esc(l.tip)}</div>`;
+  if (l.tip) h += `<div class="encart truc"><h3>${l.kana || /sons longs|petit っ|Le petit ッ|trait long|rythme|mélodie|bilan de tes sons|test du Québécois/i.test(l.t) ? 'Truc de prononciation' : 'Bon à savoir'}</h3>${esc(l.tip)}</div>`;
   if (l.kanas.length) h += `<h3 class="titre-sec">Les signes</h3><div class="kanas">${l.kanas.map(carteKana).join('')}</div>`;
   if (l.kanjis.length) h += `<h3 class="titre-sec">Les kanji</h3><div class="liste">${l.kanjis.map(ligneKanji).join('')}</div>`;
   if (l.mots.length) h += `<h3 class="titre-sec">Le vocabulaire</h3><div class="liste">${l.mots.map(m => ligneMot(m, connus)).join('')}</div>`;
